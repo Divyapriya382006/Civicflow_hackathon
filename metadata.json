@@ -1,0 +1,6 @@
+{
+  "name": "CivicFlow - Verifiable Public-Service AI Agent",
+  "description": "Secure, verifiable AI agent system for government workflows with LangGraph orchestration, DOM automation, CivicGuard multi-signal verification, and tamper-evident audit ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
