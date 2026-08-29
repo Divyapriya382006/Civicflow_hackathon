@@ -92,6 +92,19 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
     }
   };
 
+  const looksLikeDateText = (rawValue: string) => {
+    const value = rawValue.trim();
+    if (!value) return false;
+    const lower = value.toLowerCase();
+    const patterns = [
+      /^\d{4}-\d{2}-\d{2}$/,
+      /\d{1,2}(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+\d{2,4}/i,
+      /\d{1,2}\s*[/\-]\s*\d{1,2}\s*[/\-]\s*\d{2,4}/,
+      /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+\d{1,2},?\s+\d{2,4}/i,
+    ];
+    return patterns.some((pattern) => pattern.test(value)) || (/\b\d{1,2}\b/.test(lower) && /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)/i.test(lower) && /\b\d{2,4}\b/.test(lower));
+  };
+
   const normalizeVoiceValue = (field: (typeof service.fields)[number], rawValue: string) => {
     const value = rawValue.trim();
     if (field.type !== 'date' || !value) return value;
@@ -106,21 +119,26 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
       jan: 1, feb: 2, mar: 3, apr: 4, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
     };
 
-    const match = value.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{4})/i);
+    const toFourDigitYear = (year: number) => {
+      if (year < 100) return year < 50 ? 2000 + year : 1900 + year;
+      return year;
+    };
+
+    const match = value.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{2,4})/i);
     if (match) {
       const day = Number(match[1]);
       const month = monthMap[match[2].toLowerCase()];
-      const year = Number(match[3]);
+      const year = toFourDigitYear(Number(match[3]));
       if (month && year) {
         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       }
     }
 
-    const slashMatch = value.match(/(\d{1,2})\s*[/\-]\s*(\d{1,2})\s*[/\-]\s*(\d{4})/);
+    const slashMatch = value.match(/(\d{1,2})\s*[/\-]\s*(\d{1,2})\s*[/\-]\s*(\d{2,4})/);
     if (slashMatch) {
       const day = Number(slashMatch[1]);
       const month = Number(slashMatch[2]);
-      const year = Number(slashMatch[3]);
+      const year = toFourDigitYear(Number(slashMatch[3]));
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       }
@@ -128,11 +146,11 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
 
     const monthName = Object.keys(monthMap).find((m) => lower.includes(m));
     const dayNumMatch = value.match(/(\d{1,2})(?:st|nd|rd|th)?/);
-    const yearMatch = value.match(/(\d{4})/);
+    const yearMatch = value.match(/(\d{2,4})/);
     if (monthName && dayNumMatch && yearMatch) {
       const day = Number(dayNumMatch[1]);
       const month = monthMap[monthName];
-      const year = Number(yearMatch[1]);
+      const year = toFourDigitYear(Number(yearMatch[1]));
       return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }
 
@@ -206,6 +224,16 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
         .map((result: any) => result?.[0]?.transcript || '')
         .join(' ')
         .trim();
+
+      if (!transcript) return;
+
+      if (field.type !== 'date' && looksLikeDateText(transcript)) {
+        const dateWarning = `I heard a date for ${field.label}. Please tell me the ${field.label.toLowerCase()} again.`;
+        setVoiceStatus(dateWarning);
+        speakText(dateWarning);
+        return;
+      }
+
       const normalized = normalizeVoiceValue(field, transcript);
       voiceTranscriptRef.current = normalized;
       setVoiceCapturedValue(normalized);
