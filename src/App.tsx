@@ -21,7 +21,6 @@ import { DepartmentDetailView } from './components/DepartmentDetailView';
 import { ServiceIntakeView } from './components/ServiceIntakeView';
 import { InitializationSequence } from './components/InitializationSequence';
 import { ThreeBackground } from './components/ThreeBackground';
-import { LangGraphViewer } from './components/LangGraphViewer';
 import { RuntimeBrowserPanel } from './components/RuntimeBrowserPanel';
 import { CivicGuardPanel } from './components/CivicGuardPanel';
 import { HITLApprovalModal } from './components/HITLApprovalModal';
@@ -500,18 +499,12 @@ export default function App() {
                   service={selectedService}
                   events={runtimeEvents}
                   currentStepIndex={currentStepIndex}
+                  applicantData={{ ...applicantData, ...intakeFormRef.current }}
                 />
               </div>
 
               {/* Right Column (5 cols): Live LangGraph Engine Nodes & CivicGuard Verification */}
               <div className="lg:col-span-5 h-full flex flex-col space-y-5">
-                {/* Dynamic LangGraph Node Movement Viewer */}
-                <LangGraphViewer
-                  events={runtimeEvents}
-                  isPausedForHITL={isPausedForHITL}
-                  language={language}
-                />
-
                 {/* CivicGuard Consensus Engine */}
                 <CivicGuardPanel
                   signals={signals}
