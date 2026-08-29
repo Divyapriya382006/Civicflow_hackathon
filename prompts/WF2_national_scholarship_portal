@@ -1,0 +1,53 @@
+WORKFLOW ID:
+nsp_scholarship_application
+
+PORTAL:
+National Scholarship Portal
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Navigate/search for the official National Scholarship Portal.
+4. Verify official domain.
+5. Open Student section.
+6. Determine whether the user has completed OTR.
+7. If OTR is required and incomplete:
+      route to OTR workflow.
+8. Authentication.
+9. If OTP/security verification occurs:
+      HUMAN.
+10. Verify dashboard.
+11. Identify academic year.
+12. Search available scholarship schemes.
+13. Read eligibility information.
+14. Compare eligibility with verified user information.
+15. If eligibility cannot be established:
+      HUMAN REVIEW.
+16. Select the intended scholarship scheme.
+17. Start application.
+18. Inspect personal-information section.
+19. Fill verified personal information.
+20. Inspect academic-information section.
+21. Fill verified academic information.
+22. Inspect institution information.
+23. Fill verified institution information.
+24. Inspect bank information.
+25. Never invent bank information.
+26. Inspect required documents.
+27. Retrieve approved documents.
+28. Verify each document.
+29. Upload documents to matching fields.
+30. Verify uploads.
+31. Inspect all validation errors.
+32. Resolve only errors supported by verified information.
+33. Review complete application.
+34. Compare application data against source data.
+35. Detect contradictions.
+36. Generate verification report.
+37. Human approval.
+38. Submit only after approval.
+39. Verify submission.
+40. Capture application ID/reference.
+41. Store audit events.
+42. Finish.

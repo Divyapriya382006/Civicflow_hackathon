@@ -1,0 +1,30 @@
+WORKFLOW ID:
+birth_certificate
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search for:
+      [STATE/CITY] official birth certificate service
+4. Identify candidate government portal.
+5. Verify official domain.
+6. Determine jurisdiction.
+7. Identify the responsible local authority.
+8. Locate Birth Certificate / Birth Registration service.
+9. Read current requirements.
+10. Determine whether online application is supported.
+11. Login/register if required.
+12. Human authentication if required.
+13. Enter applicant/event details.
+14. Enter birth details.
+15. Enter parent/guardian details where required.
+16. Upload supporting documents.
+17. Verify documents.
+18. Check contradictions.
+19. Review application.
+20. Human approval where required.
+21. Submit.
+22. Verify acknowledgement/result.
+23. Capture application/reference number.
+24. Finish.

@@ -1,0 +1,33 @@
+WORKFLOW ID:
+marriage_registration
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search for official state/local marriage registration service.
+4. Verify official domain.
+5. Determine jurisdiction.
+6. Locate Marriage Registration service.
+7. Read current eligibility and requirements.
+8. Login/register if required.
+9. Human authentication if required.
+10. Enter applicant information.
+11. Enter spouse information.
+12. Enter marriage details.
+13. Enter address/jurisdiction details.
+14. Identify required documents.
+15. Verify documents.
+16. Upload documents.
+17. Verify uploads.
+18. Review application.
+19. Detect contradictions.
+20. Human approval.
+21. If appointment is required:
+      HUMAN confirms appointment.
+22. If payment is required:
+      HUMAN completes payment.
+23. Verify resulting state.
+24. Submit/finalize after required human approval.
+25. Capture acknowledgement/reference.
+26. Finish.

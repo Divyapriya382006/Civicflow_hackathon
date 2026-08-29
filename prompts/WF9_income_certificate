@@ -1,0 +1,31 @@
+WORKFLOW ID:
+income_certificate
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search:
+      [STATE] official income certificate
+4. Identify government portal.
+5. Verify domain.
+6. Login/register.
+7. Human authentication if required.
+8. Locate Revenue / Certificates.
+9. Select Income Certificate.
+10. Determine jurisdiction.
+11. Read eligibility.
+12. Identify required income information.
+13. Identify supporting documents.
+14. Fill applicant information.
+15. Fill address.
+16. Enter income information from verified source.
+17. Upload supporting documents.
+18. Verify documents.
+19. Detect contradictions.
+20. Review.
+21. Human approval.
+22. Submit.
+23. Verify acknowledgement.
+24. Capture reference number.
+25. Finish.

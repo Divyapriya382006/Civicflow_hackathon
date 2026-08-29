@@ -1,0 +1,26 @@
+WORKFLOW ID:
+death_certificate
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search for official state/local death certificate service.
+4. Verify domain.
+5. Determine jurisdiction.
+6. Locate death registration/certificate service.
+7. Read current requirements.
+8. Login/register if required.
+9. Human authentication if required.
+10. Enter required death information.
+11. Enter deceased person's information.
+12. Enter informant/applicant information.
+13. Upload required supporting documents.
+14. Verify documents.
+15. Check contradictions.
+16. Review.
+17. Human approval where required.
+18. Submit.
+19. Verify acknowledgement/result.
+20. Capture reference number.
+21. Finish.

@@ -1,0 +1,28 @@
+WORKFLOW ID:
+residence_certificate
+
+FLOW:
+
+1. Open browser.
+2. New tab.
+3. Search:
+      [STATE] official residence certificate
+4. Verify government domain.
+5. Login/register.
+6. Human authentication if required.
+7. Navigate to certificate/revenue services.
+8. Select Residence Certificate.
+9. Determine jurisdiction.
+10. Read current requirements.
+11. Fill applicant information.
+12. Fill address/residence information.
+13. Upload residence proof.
+14. Verify document.
+15. Compare document address with entered address.
+16. Detect contradiction.
+17. Review.
+18. Human approval.
+19. Submit.
+20. Verify result.
+21. Capture reference number.
+22. Finish.

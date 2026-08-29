@@ -1,0 +1,27 @@
+WORKFLOW ID:
+digilocker_document_retrieval
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Navigate to official DigiLocker portal.
+4. Verify domain.
+5. Login.
+6. If authentication requires OTP:
+      HUMAN.
+7. Verify dashboard.
+8. Open Issued Documents.
+9. Search for requested document.
+10. Select document category.
+11. Select issuing authority.
+12. Select requested document.
+13. Verify document identity.
+14. Retrieve/display document.
+15. Verify issuer.
+16. Verify document metadata.
+17. If user requested document sharing:
+      HUMAN CONSENT.
+18. Share only after explicit consent.
+19. Record audit event.
+20. Finish.

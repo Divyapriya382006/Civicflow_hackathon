@@ -40,10 +40,8 @@ export const HITLApprovalModal: React.FC<HITLApprovalModalProps> = ({
 
   const handleSignAndApprove = () => {
     setIsSigning(true);
-    setTimeout(() => {
-      setIsSigning(false);
-      onApprove(officerNotes);
-    }, 600);
+    onApprove(officerNotes);
+    setIsSigning(false);
   };
 
   const getRiskBadge = (level: RiskLevel) => {

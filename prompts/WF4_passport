@@ -1,0 +1,38 @@
+WORKFLOW ID:
+passport_application
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search for official Passport Seva portal if required.
+4. Verify official domain.
+5. Open Passport Seva.
+6. Login/register.
+7. Human authentication if required.
+8. Verify dashboard.
+9. Select Fresh Passport or Re-issue.
+10. Read current service instructions.
+11. Identify required fields.
+12. Fill verified applicant information.
+13. Fill family information.
+14. Fill address information.
+15. Fill previous passport information if applicable.
+16. Identify required documents.
+17. Verify documents.
+18. Upload documents where supported.
+19. Verify each upload.
+20. Review application.
+21. Detect contradictions.
+22. Display applicable fee if available.
+23. HUMAN.
+24. Payment must be completed by authorized human.
+25. Verify payment result.
+26. Appointment selection if required.
+27. HUMAN confirmation.
+28. Review final application.
+29. HUMAN APPROVAL.
+30. Submit.
+31. Verify final result.
+32. Capture reference/application number.
+33. Finish.

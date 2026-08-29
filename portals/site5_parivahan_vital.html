@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parivahan & Civil Vital Registration (Test Clone)</title>
+  <style>
+    :root {
+      --primary: #047857;
+      --primary-hover: #065f46;
+      --bg: #f0fdf4;
+      --card-bg: #ffffff;
+      --text: #064e3b;
+      --border: #a7f3d0;
+      --error: #dc2626;
+      --success: #15803d;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --warning-border: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fafafa; color: #18181b; line-height: 1.5; padding-bottom: 40px; }
+    .demo-banner { background: var(--warning-bg); color: var(--warning-text); border-bottom: 2px solid var(--warning-border); text-align: center; padding: 8px 16px; font-weight: 700; font-size: 13px; }
+    header { background: var(--primary); color: white; padding: 20px 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header-content { max-width: 900px; margin: 0 auto; }
+    header h1 { font-size: 22px; font-weight: 800; }
+    header p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    nav { background: #064e3b; padding: 0 32px; }
+    .nav-content { max-width: 900px; margin: 0 auto; display: flex; gap: 2px; overflow-x: auto; }
+    nav a { color: #a7f3d0; text-decoration: none; padding: 12px 18px; font-size: 13px; font-weight: 600; transition: all 0.2s; border-bottom: 3px solid transparent; white-space: nowrap; }
+    nav a:hover, nav a.active { color: white; background: rgba(255,255,255,0.05); border-bottom-color: #34d399; }
+    main { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+    .card { background: var(--card-bg); border: 1px solid #cbd5e1; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .page-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+    .page-desc { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    input[type="text"], input[type="date"], select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(4,120,87,0.1); }
+    .error-msg { color: var(--error); font-size: 12px; font-weight: 600; margin-top: 4px; display: block; }
+    .btn-group { display: flex; gap: 12px; margin-top: 28px; }
+    button { padding: 11px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .confirmation-box { border: 2px solid #bbf7d0; background: #f0fdf4; border-radius: 12px; padding: 32px; text-align: center; }
+    .confirmation-box h3 { color: var(--success); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; background: #dcfce7; color: #166534; border: 1px solid #86efac; margin: 8px 0 16px; }
+    .id-display { font-family: monospace; font-size: 24px; font-weight: 700; color: #1e293b; background: #ffffff; padding: 12px 24px; border-radius: 8px; border: 1px dashed #86efac; display: inline-block; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="demo-banner">⚠️ Demo/Test Environment — Not a real government service</div>
+  <header>
+    <div class="header-content">
+      <h1>Transport & Civil Vital Portal (Test Clone)</h1>
+      <p>Parivahan Sewa, Birth & Death Registration — Test Environment</p>
+    </div>
+  </header>
+  <nav>
+    <div class="nav-content">
+      <a href="#/parivahan" id="nav-parivahan">Parivahan Driving Licence</a>
+      <a href="#/birth" id="nav-birth">Birth Certificate Registration</a>
+      <a href="#/death" id="nav-death">Death Certificate Registration</a>
+    </div>
+  </nav>
+
+  <main id="app">
+    <!-- Rendered dynamically -->
+  </main>
+
+  <script>
+    function navigate(hash) { window.location.hash = hash || '#/parivahan'; }
+    window.addEventListener('hashchange', render);
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.location.hash) window.location.hash = '#/parivahan';
+      render();
+    });
+
+    function updateNav(activeId) {
+      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      const el = document.getElementById(activeId);
+      if (el) el.classList.add('active');
+    }
+
+    function render() {
+      const hash = window.location.hash || '#/parivahan';
+      const app = document.getElementById('app');
+      if (hash.startsWith('#/birth')) {
+        updateNav('nav-birth');
+        renderBirth(app);
+      } else if (hash.startsWith('#/death')) {
+        updateNav('nav-death');
+        renderDeath(app);
+      } else {
+        updateNav('nav-parivahan');
+        renderParivahan(app);
+      }
+    }
+
+    function renderParivahan(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Parivahan Sewa — Driving Licence Renewal</h2>
+          <p class="page-desc">Renew driving licence or apply for learner permit.</p>
+          <form id="parivahan-form" onsubmit="handleParivahanSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="parivahan-dlno">Driving Licence Number *</label>
+                <input type="text" id="parivahan-dlno" data-testid="parivahan-dlno-input" placeholder="KA-0120200049102" />
+                <span class="error-msg" id="err-parivahan-dlno" data-testid="error-dlno" hidden>DL Number is required</span>
+              </div>
+              <div class="form-group">
+                <label for="parivahan-dob">Date of Birth *</label>
+                <input type="date" id="parivahan-dob" data-testid="parivahan-dob-input" />
+                <span class="error-msg" id="err-parivahan-dob" data-testid="error-dob" hidden>Date of birth is required</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="parivahan-state">Select State Jurisdiction *</label>
+                <select id="parivahan-state" data-testid="parivahan-state-select">
+                  <option value="">-- Select State --</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Delhi">Delhi</option>
+                </select>
+                <span class="error-msg" id="err-parivahan-state" data-testid="error-state" hidden>Select state</span>
+              </div>
+              <div class="form-group">
+                <label for="parivahan-rto">Select RTO Office *</label>
+                <select id="parivahan-rto" data-testid="parivahan-rto-select">
+                  <option value="">-- Select RTO --</option>
+                  <option value="KA-01 Bengaluru Central">KA-01 Bengaluru Central</option>
+                  <option value="MH-01 Mumbai South">MH-01 Mumbai South</option>
+                  <option value="TN-01 Chennai Central">TN-01 Chennai Central</option>
+                  <option value="DL-01 Delhi Central">DL-01 Delhi Central</option>
+                </select>
+                <span class="error-msg" id="err-parivahan-rto" data-testid="error-rto" hidden>Select RTO</span>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="parivahan-submit-btn" data-testid="parivahan-submit-btn">Submit DL Renewal Application</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleParivahanSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const dl = document.getElementById('parivahan-dlno').value.trim();
+      const dob = document.getElementById('parivahan-dob').value;
+      const st = document.getElementById('parivahan-state').value;
+      const rto = document.getElementById('parivahan-rto').value;
+
+      document.getElementById('err-parivahan-dlno').hidden = Boolean(dl);
+      if (!dl) valid = false;
+      document.getElementById('err-parivahan-dob').hidden = Boolean(dob);
+      if (!dob) valid = false;
+      document.getElementById('err-parivahan-state').hidden = Boolean(st);
+      if (!st) valid = false;
+      document.getElementById('err-parivahan-rto').hidden = Boolean(rto);
+      if (!rto) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('parivahan-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeAppNo = 'APPL-DL-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeAppNo, 'Parivahan DL Renewal Application Submitted');
+      }, 500);
+    }
+
+    function renderBirth(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Birth Certificate Registration</h2>
+          <p class="page-desc">Apply for official civil birth registration certificate.</p>
+          <form id="birth-form" onsubmit="handleBirthSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="birth-childname">Child Full Name *</label>
+                <input type="text" id="birth-childname" data-testid="birth-childname-input" placeholder="Priya R K" />
+                <span class="error-msg" id="err-birth-childname" data-testid="error-childname" hidden>Child name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="birth-dob">Date of Birth *</label>
+                <input type="date" id="birth-dob" data-testid="birth-dob-input" />
+                <span class="error-msg" id="err-birth-dob" data-testid="error-dob" hidden>Date of birth is required</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="birth-mothername">Mother Full Name *</label>
+                <input type="text" id="birth-mothername" data-testid="birth-mothername-input" placeholder="Radha K" />
+                <span class="error-msg" id="err-birth-mothername" data-testid="error-mothername" hidden>Mother name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="birth-fathername">Father Full Name *</label>
+                <input type="text" id="birth-fathername" data-testid="birth-fathername-input" placeholder="Krishnan R" />
+                <span class="error-msg" id="err-birth-fathername" data-testid="error-fathername" hidden>Father name is required</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="birth-hospital">Hospital / Place of Birth *</label>
+              <input type="text" id="birth-hospital" data-testid="birth-hospital-input" placeholder="St. Martha Maternity Hospital, Bengaluru" />
+              <span class="error-msg" id="err-birth-hospital" data-testid="error-hospital" hidden>Hospital name is required</span>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="birth-submit-btn" data-testid="birth-submit-btn">Submit Birth Registration</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleBirthSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const child = document.getElementById('birth-childname').value.trim();
+      const dob = document.getElementById('birth-dob').value;
+      const mother = document.getElementById('birth-mothername').value.trim();
+      const father = document.getElementById('birth-fathername').value.trim();
+      const hosp = document.getElementById('birth-hospital').value.trim();
+
+      document.getElementById('err-birth-childname').hidden = Boolean(child);
+      if (!child) valid = false;
+      document.getElementById('err-birth-dob').hidden = Boolean(dob);
+      if (!dob) valid = false;
+      document.getElementById('err-birth-mothername').hidden = Boolean(mother);
+      if (!mother) valid = false;
+      document.getElementById('err-birth-fathername').hidden = Boolean(father);
+      if (!father) valid = false;
+      document.getElementById('err-birth-hospital').hidden = Boolean(hosp);
+      if (!hosp) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('birth-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeRef = 'BRTH-REG-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeRef, 'Birth Certificate Application Received');
+      }, 500);
+    }
+
+    function renderDeath(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Death Certificate Registration</h2>
+          <p class="page-desc">Apply for official civil death registration certificate.</p>
+          <form id="death-form" onsubmit="handleDeathSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="death-deceasedname">Deceased Person Full Name *</label>
+                <input type="text" id="death-deceasedname" data-testid="death-deceasedname-input" placeholder="Late Krishnan R" />
+                <span class="error-msg" id="err-death-deceasedname" data-testid="error-deceasedname" hidden>Deceased name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="death-dod">Date of Death *</label>
+                <input type="date" id="death-dod" data-testid="death-dod-input" />
+                <span class="error-msg" id="err-death-dod" data-testid="error-dod" hidden>Date of death is required</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="death-applicantname">Informant / Applicant Name *</label>
+                <input type="text" id="death-applicantname" data-testid="death-applicantname-input" placeholder="Priya R K" />
+                <span class="error-msg" id="err-death-applicantname" data-testid="error-applicantname" hidden>Applicant name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="death-place">Place of Death *</label>
+                <input type="text" id="death-place" data-testid="death-place-input" placeholder="Bengaluru East Hospital" />
+                <span class="error-msg" id="err-death-place" data-testid="error-place" hidden>Place of death is required</span>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="death-submit-btn" data-testid="death-submit-btn">Submit Death Registration</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleDeathSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const dec = document.getElementById('death-deceasedname').value.trim();
+      const dod = document.getElementById('death-dod').value;
+      const appName = document.getElementById('death-applicantname').value.trim();
+      const place = document.getElementById('death-place').value.trim();
+
+      document.getElementById('err-death-deceasedname').hidden = Boolean(dec);
+      if (!dec) valid = false;
+      document.getElementById('err-death-dod').hidden = Boolean(dod);
+      if (!dod) valid = false;
+      document.getElementById('err-death-applicantname').hidden = Boolean(appName);
+      if (!appName) valid = false;
+      document.getElementById('err-death-place').hidden = Boolean(place);
+      if (!place) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('death-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeRef = 'DTH-REG-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeRef, 'Death Certificate Application Received');
+      }, 500);
+    }
+
+    function showConfirmation(id, title) {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="confirmation-box" data-testid="confirmation-panel">
+          <h3>${title}!</h3>
+          <span class="badge" data-testid="status-badge">Application Registered</span>
+          <p style="font-size: 14px; color: #475569;">Application submitted to registrar portal.</p>
+          <div>
+            <div class="id-display" data-testid="confirmation-id">${id}</div>
+          </div>
+          <div class="btn-group" style="justify-content: center;">
+            <button class="btn-primary" onclick="window.location.reload()">New Application</button>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

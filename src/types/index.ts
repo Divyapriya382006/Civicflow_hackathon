@@ -301,12 +301,8 @@ export interface ApplicantFormData {
 }
 
 // 5 Dynamic Adaptive Scenario Types
-export type DynamicScenarioType = 
-  | 'PASS_100'              // 100% PASS
-  | 'ANOMALY_DETECTED'      // ANOMALY DETECTED
-  | 'CONTRADICTION_ALERT'   // CONTRADICTION ALERT
-  | 'ATTACK_QUARANTINED'    // ATTACK QUARANTINED
-  | 'ZERO_MUTATION_AUDIT';  // ZERO-MUTATION AUDIT
+// Scenario IDs are runtime data. Legacy IDs remain valid during migration.
+export type DynamicScenarioType = string;
 
 export type ScenarioType = DynamicScenarioType | 'HAPPY_PATH' | 'WORKFLOW_DRIFT' | 'CONTRADICTION_DETECTED';
 
@@ -337,6 +333,29 @@ export interface DynamicScenarioConfig {
     autoRemapDom: boolean;
     quarantineAdversarialInput: boolean;
     zeroMutationOnly: boolean;
+  };
+}
+
+export interface ScenarioDefinition extends DynamicScenarioConfig {
+  version: number;
+  permissions: {
+    allowedActions: ActionType[];
+    allowMutations: boolean;
+    allowSubmission: boolean;
+    requireHumanApproval: boolean;
+  };
+  ui: {
+    tone: 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+    showBanner: boolean;
+    showVault: boolean;
+    bannerTitle?: string;
+    bannerDescription?: string;
+  };
+  effects: {
+    validateDocuments: boolean;
+    inspectDom: boolean;
+    quarantineUntrustedContent: boolean;
+    confidenceThreshold: number;
   };
 }
 

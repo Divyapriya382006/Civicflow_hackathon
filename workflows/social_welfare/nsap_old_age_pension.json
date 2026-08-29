@@ -1,0 +1,20 @@
+{
+  "id": "nsap_old_age_pension",
+  "portal_id": "social_welfare",
+  "description": "Apply for a National Social Assistance pension in the controlled portal.",
+  "goal": "Complete the NSAP pension application and submit it for officer review.",
+  "portal_path": "/social_welfare/nsap-pension.html",
+  "allowed_domains": ["127.0.0.1", "localhost"],
+  "required_information": ["full_name", "scheme_type"],
+  "required_documents": [],
+  "instructions": ["Enter the beneficiary name", "Choose the welfare scheme", "Submit the application after approval"],
+  "steps": [
+    {"id": "beneficiary_name", "intent": "Enter the beneficiary full name", "action": "fill", "value_ref": "full_name", "risk": "LOW"},
+    {"id": "scheme", "intent": "Choose the welfare scheme category", "action": "select", "value_ref": "scheme_type", "risk": "LOW"},
+    {"id": "submit", "intent": "Submit the pension application", "action": "click", "target_text": "Submit Pension Application", "risk": "CRITICAL", "requires_hitl": true}
+  ],
+  "constraints": {"allow_mutations": true, "allowed_actions": ["fill", "select", "click", "wait"]},
+  "risk_rules": {"submit": {"requires_hitl": true}},
+  "verification_rules": [{"type": "required_element"}, {"type": "page_state"}],
+  "completion_conditions": [{"type": "success_message", "text": "Pension application received"}]
+}

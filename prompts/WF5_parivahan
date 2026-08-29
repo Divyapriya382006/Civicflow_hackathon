@@ -1,0 +1,33 @@
+WORKFLOW ID:
+parivahan_service
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Search for official Parivahan portal.
+4. Verify official domain.
+5. Open Online Services.
+6. Identify:
+      Driving Licence
+      OR
+      Vehicle Related Services
+7. Select required service.
+8. Select applicable state/jurisdiction.
+9. Inspect current workflow.
+10. Enter only verified vehicle/applicant information.
+11. Retrieve existing information where supported.
+12. Compare retrieved information with user information.
+13. Detect contradictions.
+14. Identify required documents.
+15. Upload approved documents.
+16. Verify uploads.
+17. Review application.
+18. Validate current state.
+19. Human approval for consequential actions.
+20. If appointment/payment/security step appears:
+      HUMAN.
+21. Submit after required approval.
+22. Verify result.
+23. Capture application/reference number.
+24. Finish.

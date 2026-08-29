@@ -298,18 +298,6 @@ export const CivicGuardPanel: React.FC<CivicGuardPanelProps> = ({
           <span className="text-[11px] font-semibold text-blue-400">Why this action: </span>
           <span className="text-slate-300">{currentStep.explanation.why}</span>
         </div>
-
-        <div>
-          <span className="text-[11px] font-semibold text-emerald-400">Verified Evidence:</span>
-          <ul className="mt-1 space-y-1">
-            {currentStep.explanation.evidence.map((ev, i) => (
-              <li key={i} className="flex items-center gap-1.5 text-slate-400 text-[11px]">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                <span>{ev}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </div>
   );

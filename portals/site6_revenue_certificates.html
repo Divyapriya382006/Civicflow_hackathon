@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>State Revenue & Land Records Portal (Test Clone)</title>
+  <style>
+    :root {
+      --primary: #854d0e;
+      --primary-hover: #a16207;
+      --bg: #fefce8;
+      --card-bg: #ffffff;
+      --text: #422006;
+      --border: #fef08a;
+      --error: #dc2626;
+      --success: #15803d;
+      --warning-bg: #fef3c7;
+      --warning-text: #92400e;
+      --warning-border: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fafafa; color: #18181b; line-height: 1.5; padding-bottom: 40px; }
+    .demo-banner { background: var(--warning-bg); color: var(--warning-text); border-bottom: 2px solid var(--warning-border); text-align: center; padding: 8px 16px; font-weight: 700; font-size: 13px; }
+    header { background: var(--primary); color: white; padding: 20px 32px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .header-content { max-width: 900px; margin: 0 auto; }
+    header h1 { font-size: 22px; font-weight: 800; }
+    header p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    nav { background: #422006; padding: 0 32px; }
+    .nav-content { max-width: 900px; margin: 0 auto; display: flex; gap: 2px; overflow-x: auto; }
+    nav a { color: #fef08a; text-decoration: none; padding: 12px 18px; font-size: 13px; font-weight: 600; transition: all 0.2s; border-bottom: 3px solid transparent; white-space: nowrap; }
+    nav a:hover, nav a.active { color: white; background: rgba(255,255,255,0.05); border-bottom-color: #facc15; }
+    main { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+    .card { background: var(--card-bg); border: 1px solid #cbd5e1; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .page-title { font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+    .page-desc { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    input[type="text"], input[type="number"], select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background: #fff; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(133,77,14,0.1); }
+    .error-msg { color: var(--error); font-size: 12px; font-weight: 600; margin-top: 4px; display: block; }
+    .btn-group { display: flex; gap: 12px; margin-top: 28px; }
+    button { padding: 11px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .confirmation-box { border: 2px solid #bbf7d0; background: #f0fdf4; border-radius: 12px; padding: 32px; text-align: center; }
+    .confirmation-box h3 { color: var(--success); font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; background: #dcfce7; color: #166534; border: 1px solid #86efac; margin: 8px 0 16px; }
+    .id-display { font-family: monospace; font-size: 24px; font-weight: 700; color: #1e293b; background: #ffffff; padding: 12px 24px; border-radius: 8px; border: 1px dashed #86efac; display: inline-block; margin: 16px 0; }
+  </style>
+</head>
+<body>
+  <div class="demo-banner">⚠️ Demo/Test Environment — Not a real government service</div>
+  <header>
+    <div class="header-content">
+      <h1>Revenue & Land Certificates Portal (Test Clone)</h1>
+      <p>State Income, Residence & Marriage Certificates — Test Environment</p>
+    </div>
+  </header>
+  <nav>
+    <div class="nav-content">
+      <a href="#/marriage" id="nav-marriage">Marriage Registration</a>
+      <a href="#/income" id="nav-income">Income Certificate</a>
+      <a href="#/residence" id="nav-residence">Residence Certificate</a>
+    </div>
+  </nav>
+
+  <main id="app">
+    <!-- Rendered dynamically -->
+  </main>
+
+  <script>
+    function navigate(hash) { window.location.hash = hash || '#/marriage'; }
+    window.addEventListener('hashchange', render);
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!window.location.hash) window.location.hash = '#/marriage';
+      render();
+    });
+
+    function updateNav(activeId) {
+      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      const el = document.getElementById(activeId);
+      if (el) el.classList.add('active');
+    }
+
+    function render() {
+      const hash = window.location.hash || '#/marriage';
+      const app = document.getElementById('app');
+      if (hash.startsWith('#/income')) {
+        updateNav('nav-income');
+        renderIncome(app);
+      } else if (hash.startsWith('#/residence')) {
+        updateNav('nav-residence');
+        renderResidence(app);
+      } else {
+        updateNav('nav-marriage');
+        renderMarriage(app);
+      }
+    }
+
+    function renderMarriage(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Marriage Registration Application</h2>
+          <p class="page-desc">Apply for official statutory marriage registration certificate.</p>
+          <form id="marriage-form" onsubmit="handleMarriageSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="marriage-applicant">Applicant Name (Groom/Bride) *</label>
+                <input type="text" id="marriage-applicant" data-testid="marriage-applicant-input" placeholder="Priya R K" />
+                <span class="error-msg" id="err-marriage-applicant" data-testid="error-applicant" hidden>Applicant name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="marriage-spouse">Spouse Full Name *</label>
+                <input type="text" id="marriage-spouse" data-testid="marriage-spouse-input" placeholder="Karthik M" />
+                <span class="error-msg" id="err-marriage-spouse" data-testid="error-spouse" hidden>Spouse name is required</span>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="marriage-date">Date of Marriage *</label>
+                <input type="date" id="marriage-date" data-testid="marriage-date-input" />
+                <span class="error-msg" id="err-marriage-date" data-testid="error-date" hidden>Marriage date is required</span>
+              </div>
+              <div class="form-group">
+                <label for="marriage-place">Place / Registrar Office *</label>
+                <input type="text" id="marriage-place" data-testid="marriage-place-input" placeholder="Sub-Registrar Office, Jayanagar" />
+                <span class="error-msg" id="err-marriage-place" data-testid="error-place" hidden>Place is required</span>
+              </div>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="marriage-submit-btn" data-testid="marriage-submit-btn">Submit Marriage Application</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleMarriageSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const appName = document.getElementById('marriage-applicant').value.trim();
+      const spouse = document.getElementById('marriage-spouse').value.trim();
+      const date = document.getElementById('marriage-date').value;
+      const place = document.getElementById('marriage-place').value.trim();
+
+      document.getElementById('err-marriage-applicant').hidden = Boolean(appName);
+      if (!appName) valid = false;
+      document.getElementById('err-marriage-spouse').hidden = Boolean(spouse);
+      if (!spouse) valid = false;
+      document.getElementById('err-marriage-date').hidden = Boolean(date);
+      if (!date) valid = false;
+      document.getElementById('err-marriage-place').hidden = Boolean(place);
+      if (!place) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('marriage-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeRef = 'MRG-REG-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeRef, 'Marriage Registration Application Submitted');
+      }, 500);
+    }
+
+    function renderIncome(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Income Certificate Application</h2>
+          <p class="page-desc">Issue of official annual family income certificate from Revenue Department.</p>
+          <form id="income-form" onsubmit="handleIncomeSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="income-fullname">Applicant Full Name *</label>
+                <input type="text" id="income-fullname" data-testid="income-fullname-input" placeholder="Priya R K" />
+                <span class="error-msg" id="err-income-fullname" data-testid="error-fullname" hidden>Full name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="income-amount">Annual Family Income (₹) *</label>
+                <input type="number" id="income-amount" data-testid="income-amount-input" placeholder="120000" />
+                <span class="error-msg" id="err-income-amount" data-testid="error-amount" hidden>Annual income is required</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="income-purpose">Purpose of Certificate *</label>
+              <select id="income-purpose" data-testid="income-purpose-select">
+                <option value="">-- Select Purpose --</option>
+                <option value="Education Scholarship">Education Scholarship</option>
+                <option value="Fee Concession">Fee Concession</option>
+                <option value="Government Housing Scheme">Government Housing Scheme</option>
+                <option value="Social Welfare Scheme">Social Welfare Scheme</option>
+              </select>
+              <span class="error-msg" id="err-income-purpose" data-testid="error-purpose" hidden>Select purpose</span>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="income-submit-btn" data-testid="income-submit-btn">Submit Income Certificate Request</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleIncomeSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const name = document.getElementById('income-fullname').value.trim();
+      const amt = document.getElementById('income-amount').value;
+      const purp = document.getElementById('income-purpose').value;
+
+      document.getElementById('err-income-fullname').hidden = Boolean(name);
+      if (!name) valid = false;
+      document.getElementById('err-income-amount').hidden = Boolean(amt);
+      if (!amt) valid = false;
+      document.getElementById('err-income-purpose').hidden = Boolean(purp);
+      if (!purp) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('income-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeRef = 'INC-CERT-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeRef, 'Income Certificate Request Received');
+      }, 500);
+    }
+
+    function renderResidence(container) {
+      container.innerHTML = `
+        <div class="card">
+          <h2 class="page-title">Residence / Domicile Certificate Application</h2>
+          <p class="page-desc">Apply for official residence/domicile status validation.</p>
+          <form id="residence-form" onsubmit="handleResidenceSubmit(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label for="residence-fullname">Applicant Full Name *</label>
+                <input type="text" id="residence-fullname" data-testid="residence-fullname-input" placeholder="Priya R K" />
+                <span class="error-msg" id="err-residence-fullname" data-testid="error-fullname" hidden>Full name is required</span>
+              </div>
+              <div class="form-group">
+                <label for="residence-years">Years of Residence in State *</label>
+                <input type="number" id="residence-years" data-testid="residence-years-input" placeholder="10" min="1" />
+                <span class="error-msg" id="err-residence-years" data-testid="error-years" hidden>Years field is required</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="residence-address">Current Residential Address *</label>
+              <input type="text" id="residence-address" data-testid="residence-address-input" placeholder="Plot 42, Green Valley Enclave, Bengaluru" />
+              <span class="error-msg" id="err-residence-address" data-testid="error-address" hidden>Address is required</span>
+            </div>
+            <div class="btn-group">
+              <button type="submit" class="btn-primary" id="residence-submit-btn" data-testid="residence-submit-btn">Submit Residence Certificate Request</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function handleResidenceSubmit(e) {
+      e.preventDefault();
+      let valid = true;
+      const name = document.getElementById('residence-fullname').value.trim();
+      const yrs = document.getElementById('residence-years').value;
+      const addr = document.getElementById('residence-address').value.trim();
+
+      document.getElementById('err-residence-fullname').hidden = Boolean(name);
+      if (!name) valid = false;
+      document.getElementById('err-residence-years').hidden = Boolean(yrs);
+      if (!yrs) valid = false;
+      document.getElementById('err-residence-address').hidden = Boolean(addr);
+      if (!addr) valid = false;
+
+      if (!valid) return;
+
+      const btn = document.getElementById('residence-submit-btn');
+      btn.disabled = true;
+      btn.innerHTML = `<span class="loading-spinner" data-testid="submit-loading"></span> Submitting...`;
+
+      setTimeout(() => {
+        const fakeRef = 'RES-CERT-' + Math.floor(10000000 + Math.random() * 90000000);
+        showConfirmation(fakeRef, 'Residence Certificate Request Received');
+      }, 500);
+    }
+
+    function showConfirmation(id, title) {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        <div class="confirmation-box" data-testid="confirmation-panel">
+          <h3>${title}!</h3>
+          <span class="badge" data-testid="status-badge">Application Under Revenue Officer Review</span>
+          <p style="font-size: 14px; color: #475569;">Application submitted to revenue portal.</p>
+          <div>
+            <div class="id-display" data-testid="confirmation-id">${id}</div>
+          </div>
+          <div class="btn-group" style="justify-content: center;">
+            <button class="btn-primary" onclick="window.location.reload()">New Application</button>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

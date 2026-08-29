@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Department, 
   ServiceWorkflow, 
   WorkflowStep, 
   ApplicantFormData, 
-  LangGraphNodeId, 
   CivicGuardSignals, 
   AuditEvent, 
   DynamicScenarioType, 
   ContradictionItem,
   SupportedLanguage 
+  ,ScenarioDefinition
 } from './types';
 import { DEPARTMENTS, DEFAULT_APPLICANT } from './data/workflows';
 import { tokenizePIIData, computeEventHash } from './utils/crypto';
-import { evaluateDynamicSignals, DYNAMIC_SCENARIO_CONFIGS } from './utils/dynamicScenario';
+import { evaluateDynamicSignals, SCENARIOS, resolveScenario } from './utils/dynamicScenario';
 import { Header } from './components/Header';
 import { LandingHero } from './components/LandingHero';
 import { DepartmentCatalog } from './components/DepartmentCatalog';
@@ -22,12 +22,13 @@ import { ServiceIntakeView } from './components/ServiceIntakeView';
 import { InitializationSequence } from './components/InitializationSequence';
 import { ThreeBackground } from './components/ThreeBackground';
 import { LangGraphViewer } from './components/LangGraphViewer';
-import { DesktopBrowserController } from './components/DesktopBrowserController';
+import { RuntimeBrowserPanel } from './components/RuntimeBrowserPanel';
 import { CivicGuardPanel } from './components/CivicGuardPanel';
 import { HITLApprovalModal } from './components/HITLApprovalModal';
 import { AuditLedgerView } from './components/AuditLedgerView';
 import { SecurityVaultModal } from './components/SecurityVaultModal';
 import { getTranslation } from './i18n/translations';
+import { RuntimeEvent, startRuntimeSession, subscribeToRuntime, respondToApproval } from './runtime/eventClient';
 import { 
   CheckCheck, 
   FileCode2, 
@@ -54,6 +55,8 @@ export default function App() {
 
   // Dynamic Scenario State (Generalized Adaptive Scenarios)
   const [currentScenario, setCurrentScenario] = useState<DynamicScenarioType>('PASS_100');
+  const [activeScenario, setActiveScenario] = useState<ScenarioDefinition>(SCENARIOS[0]);
+  const [scenarioDefinitions, setScenarioDefinitions] = useState<ScenarioDefinition[]>(SCENARIOS);
 
   // Execution & Progression State
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
@@ -61,9 +64,10 @@ export default function App() {
   const [isPausedForHITL, setIsPausedForHITL] = useState<boolean>(false);
   const [isWorkflowCompleted, setIsWorkflowCompleted] = useState<boolean>(false);
 
-  // LangGraph State Machine
-  const [activeNodeId, setActiveNodeId] = useState<LangGraphNodeId | null>(null);
-  const [executedNodeIds, setExecutedNodeIds] = useState<LangGraphNodeId[]>([]);
+  // Backend runtime projection
+  const [runtimeEvents, setRuntimeEvents] = useState<RuntimeEvent[]>([]);
+  const [runtimeSessionId, setRuntimeSessionId] = useState<string | null>(null);
+  const unsubscribeRuntime = useRef<(() => void) | null>(null);
 
   // Anomaly, Contradiction, & Attack Isolation State
   const [contradiction, setContradiction] = useState<ContradictionItem | null>(null);
@@ -72,7 +76,7 @@ export default function App() {
 
   // Dynamic Signals Consensus Engine
   const [signals, setSignals] = useState<CivicGuardSignals>(() => 
-    evaluateDynamicSignals('PASS_100', 0, false, null, false)
+    evaluateDynamicSignals(SCENARIOS[0], 0, false, null, false)
   );
 
   // Tamper-Evident Audit Ledger State
@@ -170,111 +174,47 @@ export default function App() {
     setLatestHash(newHash);
   };
 
-  // LangGraph Step Execution Runner
-  const runLangGraphStep = async (stepIdx: number) => {
-    const targetStep = steps[stepIdx];
-    if (!targetStep) return;
-
-    const nodeSequence: LangGraphNodeId[] = [
-      'intent_validator',
-      'service_identifier',
-      'workflow_retriever',
-      'document_validator',
-      'step_planner',
-      'policy_checker',
-      'dom_analyzer',
-      'action_generator',
-      'action_validator',
-      'security_gate',
-    ];
-
-    for (const nodeId of nodeSequence) {
-      setActiveNodeId(nodeId);
-      setExecutedNodeIds((prev) => Array.from(new Set([...prev, nodeId])));
-      await new Promise((r) => setTimeout(r, 90));
-    }
-
-    // HITL Pause if required by scenario, step, or low confidence
-    const scenarioConfig = DYNAMIC_SCENARIO_CONFIGS[currentScenario];
-    const isZeroMutation = scenarioConfig.adaptiveBehaviors.zeroMutationOnly;
-
-    if (isZeroMutation && targetStep.action === 'SUBMIT') {
-      // In zero-mutation mode, don't execute mutations
-      setActiveNodeId('verification_engine');
-      setIsWorkflowCompleted(true);
-      setIsExecuting(false);
-      return;
-    }
-
-    if (
-      targetStep.requiresHITL || 
-      signals.compositeConfidence < 0.90 || 
-      targetStep.action === 'SUBMIT' ||
-      (currentScenario === 'ANOMALY_DETECTED' && !isDriftResolved && stepIdx >= 2) ||
-      (currentScenario === 'CONTRADICTION_ALERT' && contradiction && !contradiction.resolved && stepIdx >= 1)
-    ) {
-      setActiveNodeId('human_approval');
-      setIsPausedForHITL(true);
-      setIsExecuting(false);
-      return;
-    }
-
-    await completeStepExecution(stepIdx, false);
-  };
-
-  // Complete step execution
-  const completeStepExecution = async (stepIdx: number, approvedByHuman: boolean, officerNotes?: string) => {
-    const targetStep = steps[stepIdx];
-    const postExecutionNodes: LangGraphNodeId[] = [
-      'playwright_executor',
-      'result_extractor',
-      'verification_engine',
-      'confidence_gate',
-    ];
-
-    for (const nodeId of postExecutionNodes) {
-      setActiveNodeId(nodeId);
-      setExecutedNodeIds((prev) => Array.from(new Set([...prev, nodeId])));
-      await new Promise((r) => setTimeout(r, 100));
-    }
-
-    await recordAuditEvent(targetStep, approvedByHuman, officerNotes);
-
-    if (stepIdx < steps.length - 1) {
-      setCurrentStepIndex(stepIdx + 1);
-      setIsExecuting(true);
-      setTimeout(() => {
-        runLangGraphStep(stepIdx + 1);
-      }, 300);
-    } else {
-      setIsWorkflowCompleted(true);
-      setIsExecuting(false);
-      setActiveNodeId(null);
-    }
-  };
-
-  // Start execution after initialization
-  const handleStartWorkflow = () => {
+  // Start the backend runtime; all subsequent state comes from its event stream.
+  const handleStartWorkflow = async () => {
     setViewMode('WORKSPACE');
     setIsWorkflowCompleted(false);
     setIsPausedForHITL(false);
     setIsExecuting(true);
     setCurrentStepIndex(0);
-    setExecutedNodeIds([]);
-    runLangGraphStep(0);
+    setRuntimeEvents([]);
+    const session = await startRuntimeSession(selectedService.id, {
+      full_name: applicantData.fullName,
+      license_number: applicantData.aadhaarNumber,
+    });
+    setRuntimeSessionId(session.session_id);
+    unsubscribeRuntime.current?.();
+    unsubscribeRuntime.current = subscribeToRuntime(session.session_id, (event) => {
+      setRuntimeEvents((previous) => [...previous, event]);
+      const stepMatch = event.node_id?.match(/^step_(\d+)_/);
+      if (stepMatch) setCurrentStepIndex(Number(stepMatch[1]));
+      if (event.type === 'HITL_REQUIRED') {
+        setIsPausedForHITL(true);
+        setIsExecuting(false);
+      }
+      if (event.type === 'WORKFLOW_COMPLETED' || event.type === 'WORKFLOW_FAILED') {
+        setIsWorkflowCompleted(event.type === 'WORKFLOW_COMPLETED');
+        setIsExecuting(false);
+      }
+    }, () => setIsExecuting(false));
   };
 
   // Human / Citizen Approval
   const handleApproveHITL = (officerNotes: string) => {
+    if (runtimeSessionId) void respondToApproval(runtimeSessionId, true, officerNotes);
     setIsPausedForHITL(false);
-    completeStepExecution(currentStepIndex, true, officerNotes);
+    setIsExecuting(true);
   };
 
   // Rejection
   const handleRejectHITL = () => {
+    if (runtimeSessionId) void respondToApproval(runtimeSessionId, false, 'Rejected by user');
     setIsPausedForHITL(false);
     setIsExecuting(false);
-    setActiveNodeId(null);
   };
 
   // Resolve Contradiction
@@ -325,8 +265,10 @@ export default function App() {
     setIsExecuting(false);
     setIsPausedForHITL(false);
     setIsWorkflowCompleted(false);
-    setActiveNodeId(null);
-    setExecutedNodeIds([]);
+    unsubscribeRuntime.current?.();
+    unsubscribeRuntime.current = null;
+    setRuntimeSessionId(null);
+    setRuntimeEvents([]);
     setIsDriftResolved(false);
     setContradiction(null);
     setIsAttackQuarantined(false);
@@ -365,6 +307,20 @@ export default function App() {
     setViewMode('INITIALIZING');
   };
 
+  const handleGenerateScenario = async () => {
+    const response = await fetch('/api/gemini/generate-scenario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent: 'Generate a safe scenario for the current civic workflow', context: { service: selectedService.id, step: currentStepIndex }, requirements: 'Keep sensitive data local and require approval for mutations.' }),
+    });
+    const payload = await response.json() as { scenario?: ScenarioDefinition };
+    if (!payload.scenario) return;
+    setScenarioDefinitions((previous) => [...previous.filter((scenario) => scenario.type !== payload.scenario?.type), payload.scenario]);
+    setCurrentScenario(payload.scenario.type);
+    setActiveScenario(payload.scenario);
+    handleReset();
+  };
+
   const totalServicesCount = DEPARTMENTS.reduce((acc, d) => acc + d.services.length, 0);
 
   return (
@@ -377,6 +333,7 @@ export default function App() {
         currentScenario={currentScenario}
         onSelectScenario={(sc) => {
           setCurrentScenario(sc);
+          setActiveScenario(resolveScenario(SCENARIOS.find((scenario) => scenario.type === sc)));
           handleReset();
         }}
         language={language}
@@ -388,6 +345,8 @@ export default function App() {
         isRunning={isExecuting}
         totalAuditCount={auditLedger.length}
         isInWorkspace={viewMode === 'WORKSPACE'}
+        scenarios={scenarioDefinitions}
+        onGenerateScenario={handleGenerateScenario}
       />
 
       {/* View Router */}
@@ -495,75 +454,27 @@ export default function App() {
               </div>
             </div>
 
-            {/* LangGraph Deterministic Engine Visualizer */}
-            <LangGraphViewer
-              activeNodeId={activeNodeId}
-              executedNodeIds={executedNodeIds}
-              isPausedForHITL={isPausedForHITL}
-              language={language}
-            />
-
-            {/* Workflow Completed Summary Hero */}
-            {isWorkflowCompleted && (
-              <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border-2 border-emerald-500/50 shadow-2xl animate-in zoom-in-95 duration-300">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold shadow-lg shadow-emerald-500/30">
-                      <CheckCheck className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-white">
-                          Government Application Executed & Verified
-                        </h2>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-semibold">
-                          VERIFIED DOCKET
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-300 mt-0.5">
-                        {steps.length}/{steps.length} Steps Executed • Dispatched to Local Browser • Memory Cleared
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                    <button
-                      onClick={() => setIsLedgerOpen(true)}
-                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all"
-                    >
-                      <FileCode2 className="w-4 h-4" />
-                      <span>{getTranslation('nav_ledger', language)}</span>
-                    </button>
-                    <button
-                      onClick={handleReturnToCatalog}
-                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs transition-colors flex items-center gap-1.5"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>{getTranslation('back_to_catalog', language)}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Split Execution Panel: Local Desktop Browser Controller & CivicGuard Consensus Meter */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Left Column (7 cols): Desktop Browser Controller (Real Laptop Browser Integration) */}
+            {/* Split Execution Panel: Full Height Rendered Portal & Live LangGraph Node Movement */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              {/* Left Column (7 cols): Full Rendered Standalone Website Frame (No Inner Scrolling) */}
               <div className="lg:col-span-7 h-full flex flex-col">
-                <DesktopBrowserController
-                  department={selectedDepartment}
+                <RuntimeBrowserPanel
                   service={selectedService}
+                  events={runtimeEvents}
                   currentStepIndex={currentStepIndex}
-                  steps={steps}
-                  applicantData={applicantData}
-                  currentScenario={currentScenario}
-                  isExecuting={isExecuting}
-                  language={language}
                 />
               </div>
 
-              {/* Right Column (5 cols): CivicGuard Verification Engine */}
-              <div className="lg:col-span-5 h-full flex flex-col">
+              {/* Right Column (5 cols): Live LangGraph Engine Nodes & CivicGuard Verification */}
+              <div className="lg:col-span-5 h-full flex flex-col space-y-5">
+                {/* Dynamic LangGraph Node Movement Viewer */}
+                <LangGraphViewer
+                  events={runtimeEvents}
+                  isPausedForHITL={isPausedForHITL}
+                  language={language}
+                />
+
+                {/* CivicGuard Consensus Engine */}
                 <CivicGuardPanel
                   signals={signals}
                   currentStep={currentStep}

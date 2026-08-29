@@ -13,10 +13,9 @@ import {
   Search,
   Zap
 } from 'lucide-react';
-import { DynamicScenarioType, SupportedLanguage } from '../types';
+import { DynamicScenarioType, ScenarioDefinition, SupportedLanguage } from '../types';
 import { SUPPORTED_LANGUAGES } from '../i18n/languages';
 import { getTranslation } from '../i18n/translations';
-import { DYNAMIC_SCENARIO_CONFIGS } from '../utils/dynamicScenario';
 
 interface HeaderProps {
   currentScenario: DynamicScenarioType;
@@ -30,6 +29,8 @@ interface HeaderProps {
   isRunning: boolean;
   totalAuditCount: number;
   isInWorkspace?: boolean;
+  scenarios: ScenarioDefinition[];
+  onGenerateScenario: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,16 +45,10 @@ export const Header: React.FC<HeaderProps> = ({
   isRunning,
   totalAuditCount,
   isInWorkspace = false,
+  scenarios,
+  onGenerateScenario,
 }) => {
   const currentLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
-
-  const scenarioList: DynamicScenarioType[] = [
-    'PASS_100',
-    'ANOMALY_DETECTED',
-    'CONTRADICTION_ALERT',
-    'ATTACK_QUARANTINED',
-    'ZERO_MUTATION_AUDIT',
-  ];
 
   return (
     <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-slate-100 sticky top-0 z-40 px-4 py-3 shadow-lg">
@@ -108,13 +103,12 @@ export const Header: React.FC<HeaderProps> = ({
             {getTranslation('nav_scenario', language)}:
           </span>
           <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
-            {scenarioList.map((scType) => {
-              const config = DYNAMIC_SCENARIO_CONFIGS[scType];
-              const active = currentScenario === scType;
+            {scenarios.map((scenario) => {
+              const active = currentScenario === scenario.type;
               return (
                 <button
-                  key={scType}
-                  onClick={() => onSelectScenario(scType)}
+                  key={scenario.type}
+                  onClick={() => onSelectScenario(scenario.type)}
                   disabled={isRunning}
                   className={`text-xs px-2.5 py-1.5 rounded-lg font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     active
@@ -122,16 +116,24 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   } ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {scType === 'PASS_100' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />}
-                  {scType === 'ANOMALY_DETECTED' && <AlertTriangle className="w-3.5 h-3.5 text-amber-300" />}
-                  {scType === 'CONTRADICTION_ALERT' && <AlertTriangle className="w-3.5 h-3.5 text-rose-300" />}
-                  {scType === 'ATTACK_QUARANTINED' && <ShieldAlert className="w-3.5 h-3.5 text-purple-300" />}
-                  {scType === 'ZERO_MUTATION_AUDIT' && <Search className="w-3.5 h-3.5 text-cyan-300" />}
-                  <span>{config.title}</span>
+                  {scenario.ui.tone === 'success' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />}
+                  {scenario.ui.tone === 'warning' && <AlertTriangle className="w-3.5 h-3.5 text-amber-300" />}
+                  {scenario.ui.tone === 'danger' && <ShieldAlert className="w-3.5 h-3.5 text-rose-300" />}
+                  {scenario.ui.tone === 'info' && <Search className="w-3.5 h-3.5 text-cyan-300" />}
+                  <span>{scenario.title}</span>
                 </button>
               );
             })}
           </div>
+          <button
+            onClick={onGenerateScenario}
+            disabled={isRunning}
+            className="text-xs px-2.5 py-1.5 rounded-lg font-bold text-cyan-300 hover:bg-cyan-950/60 border border-cyan-500/30 whitespace-nowrap disabled:opacity-50"
+            title="Generate a scenario from the current workflow context"
+          >
+            <Zap className="w-3.5 h-3.5 inline mr-1" />
+            Generate
+          </button>
         </div>
 
         {/* Action Controls & Navigation (Citizen Friendly, No Jargon) */}

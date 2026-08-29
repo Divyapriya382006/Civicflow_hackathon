@@ -1,156 +1,262 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  Network, 
+  Play, 
+  CheckCircle2, 
   Clock, 
-  Cpu, 
-  CheckCheck
+  HelpCircle, 
+  Eye, 
+  UserCheck, 
+  Zap,
+  CornerDownRight
 } from 'lucide-react';
-import { LangGraphNodeId, SupportedLanguage } from '../types';
-import { getTranslation } from '../i18n/translations';
+import { SupportedLanguage } from '../types';
+import { RuntimeEvent } from '../runtime/eventClient';
 
 interface LangGraphViewerProps {
-  activeNodeId: LangGraphNodeId | null;
-  executedNodeIds: LangGraphNodeId[];
+  events: RuntimeEvent[];
   isPausedForHITL: boolean;
   language: SupportedLanguage;
 }
 
-const NODES_CONFIG: Array<{
-  id: LangGraphNodeId;
-  label: string;
-  category: 'PLANNING' | 'SECURITY' | 'EXECUTION' | 'VERIFICATION';
-  description: string;
-}> = [
-  { id: 'intent_validator', label: '1. Intent Validation', category: 'PLANNING', description: 'Parses citizen request & checks semantic scope' },
-  { id: 'service_identifier', label: '2. Portal Mapping', category: 'PLANNING', description: 'Maps goal to official department catalog' },
-  { id: 'workflow_retriever', label: '3. Workflow Schema', category: 'PLANNING', description: 'Fetches certified government workflow definition' },
-  { id: 'document_validator', label: '4. Document Check', category: 'SECURITY', description: 'Validates file format, size, and identity proof integrity' },
-  { id: 'step_planner', label: '5. Action Planner', category: 'PLANNING', description: 'Generates structured step sequence & expected DOM states' },
-  { id: 'policy_checker', label: '6. Privacy Guard', category: 'SECURITY', description: 'Enforces statutory compliance & PII memory protection' },
-  { id: 'dom_analyzer', label: '7. DOM Extraction', category: 'EXECUTION', description: 'Extracts real interactive nodes from local laptop browser' },
-  { id: 'action_generator', label: '8. Step Dispatcher', category: 'EXECUTION', description: 'Constrained action synthesis (CLICK/TYPE/UPLOAD/SUBMIT)' },
-  { id: 'action_validator', label: '9. Safety Intercept', category: 'SECURITY', description: 'Blocks unauthorized mutations or untrusted redirects' },
-  { id: 'security_gate', label: '10. Risk Evaluation', category: 'SECURITY', description: 'Evaluates risk level & determines if confirmation is required' },
-  { id: 'human_approval', label: '11. User Sign-Off', category: 'VERIFICATION', description: 'Citizen/Officer authorization modal for high-risk actions' },
-  { id: 'playwright_executor', label: '12. Browser Driver', category: 'EXECUTION', description: 'Executes validated action in real laptop browser tab' },
-  { id: 'result_extractor', label: '13. DOM Sync', category: 'EXECUTION', description: 'Extracts post-execution state and confirms field values' },
-  { id: 'verification_engine', label: '14. Multi-Signal AI', category: 'VERIFICATION', description: 'CivicGuard 5-signal multi-evidence evaluation' },
-  { id: 'confidence_gate', label: '15. Consensus Gate', category: 'VERIFICATION', description: 'Proceeds autonomously or triggers safety pause' },
-];
-
 export const LangGraphViewer: React.FC<LangGraphViewerProps> = ({
-  activeNodeId,
-  executedNodeIds,
+  events,
   isPausedForHITL,
-  language,
 }) => {
-  const [selectedNode, setSelectedNode] = useState<typeof NODES_CONFIG[0] | null>(null);
+  const latestStarted = [...events].reverse().find((event) => event.type === 'NODE_STARTED')?.node_id;
+  const completedNodes = new Set(events.filter((event) => event.type === 'NODE_COMPLETED').map((event) => event.node_id));
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'PLANNING': return 'border-blue-500/40 text-blue-400 bg-blue-950/30';
-      case 'SECURITY': return 'border-purple-500/40 text-purple-400 bg-purple-950/30';
-      case 'EXECUTION': return 'border-amber-500/40 text-amber-400 bg-amber-950/30';
-      case 'VERIFICATION': return 'border-emerald-500/40 text-emerald-400 bg-emerald-950/30';
-      default: return 'border-slate-700 text-slate-400 bg-slate-900';
+  let activeNode = 'observe';
+  if (latestStarted) {
+    if (latestStarted.includes('observe')) activeNode = 'observe';
+    else if (latestStarted.includes('analyze')) activeNode = 'analyze_and_decide';
+    else if (latestStarted.includes('vision')) activeNode = 'vision_fallback';
+    else if (latestStarted.includes('user') || latestStarted.includes('hitl')) activeNode = 'user_confirmation';
+    else if (latestStarted.includes('act')) activeNode = 'act';
+  } else if (events.some(e => e.type === 'HITL_REQUIRED')) {
+    activeNode = 'user_confirmation';
+  }
+
+  // Red = Completed, Green = In Progress (Active), Plain Slate = Pending
+  const getNodeStatus = (nodeId: string) => {
+    const isNodeCompleted = completedNodes.has(nodeId) || 
+      (nodeId === 'observe' && events.some(e => e.type === 'DOM_OBSERVED')) ||
+      (nodeId === 'analyze_and_decide' && events.some(e => e.type === 'DECISION_CREATED')) ||
+      (nodeId === 'act' && events.some(e => e.type === 'ACTION_EXECUTED'));
+
+    const isActive = activeNode === nodeId;
+
+    if (isActive) {
+      return {
+        bgClass: 'bg-emerald-950/90 border-emerald-500 text-emerald-100 ring-2 ring-emerald-500/60 shadow-lg shadow-emerald-500/20 animate-pulse',
+        badgeClass: 'bg-emerald-500 text-slate-950 font-bold',
+        badgeText: 'IN PROGRESS',
+        stroke: '#10b981',
+      };
+    } else if (isNodeCompleted) {
+      return {
+        bgClass: 'bg-red-950/60 border-red-500/80 text-red-100',
+        badgeClass: 'bg-red-500/20 text-red-300 border border-red-500/40',
+        badgeText: 'COMPLETED',
+        stroke: '#ef4444',
+      };
+    } else {
+      return {
+        bgClass: 'bg-slate-950/70 border-slate-800 text-slate-400 opacity-60',
+        badgeClass: 'bg-slate-800 text-slate-400 border border-slate-700',
+        badgeText: 'PENDING',
+        stroke: '#475569',
+      };
     }
   };
 
+  const observeState = getNodeStatus('observe');
+  const analyzeState = getNodeStatus('analyze_and_decide');
+  const visionState = getNodeStatus('vision_fallback');
+  const userState = getNodeStatus('user_confirmation');
+  const actState = getNodeStatus('act');
+
   return (
-    <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-4 shadow-xl backdrop-blur-md">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+    <div className="bg-slate-900/95 rounded-2xl border border-slate-800 p-4 shadow-2xl backdrop-blur-md">
+      {/* Top Header & Color Legend */}
+      <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800">
         <div className="flex items-center gap-2">
-          <Network className="w-5 h-5 text-blue-400" />
+          <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
           <h2 className="text-sm font-bold text-slate-100 tracking-wide">
-            {getTranslation('state_machine_title', language)}
+            LangGraph State Machine Flowchart
           </h2>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-            Deterministic Engine
-          </span>
         </div>
 
         {/* Legend */}
-        <div className="hidden sm:flex items-center gap-3 text-[11px] text-slate-400">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-blue-400"></span> Planning
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> In Progress (Green)
           </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-purple-400"></span> Security
+          <span className="flex items-center gap-1.5 font-semibold text-red-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Completed (Red)
           </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span> Execution
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Verification
+          <span className="flex items-center gap-1.5 font-semibold text-slate-400">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span> Pending (Plain)
           </span>
         </div>
       </div>
 
-      {/* Interactive Graph Node Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-        {NODES_CONFIG.map((node) => {
-          const isActive = activeNodeId === node.id;
-          const isExecuted = executedNodeIds.includes(node.id);
-          const isHitlWaiting = isPausedForHITL && node.id === 'human_approval';
+      {/* SVG Diagram with Exact Crisp Directed Edge Connectors & Arrowheads matching the user's flowchart image */}
+      <div className="relative w-full overflow-x-auto flex flex-col items-center">
+        <svg 
+          viewBox="0 0 540 680" 
+          className="w-full max-w-[500px] h-auto font-sans select-none"
+        >
+          <defs>
+            {/* Marker Definitions for Directed Arrow Edges */}
+            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+            </marker>
+            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+            </marker>
+          </defs>
 
-          let stateClass = 'bg-slate-950/50 border-slate-800 text-slate-400 opacity-70';
-          let statusBadge = null;
+          {/* EDGE 1: Start -> observe() */}
+          <line x1="270" y1="42" x2="270" y2="70" stroke="#64748b" strokeWidth="2" markerEnd="url(#arrow)" />
 
-          if (isHitlWaiting) {
-            stateClass = 'bg-amber-950/60 border-amber-500 text-amber-200 ring-2 ring-amber-500/50 animate-pulse';
-            statusBadge = <Clock className="w-3.5 h-3.5 text-amber-400 animate-spin" />;
-          } else if (isActive) {
-            stateClass = 'bg-blue-900/60 border-blue-400 text-white ring-2 ring-blue-500/60 shadow-lg shadow-blue-500/20';
-            statusBadge = <Cpu className="w-3.5 h-3.5 text-blue-300 animate-bounce" />;
-          } else if (isExecuted) {
-            stateClass = 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300';
-            statusBadge = <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />;
-          }
+          {/* EDGE 2: observe() -> analyze_and_decide() */}
+          <line x1="270" y1="160" x2="270" y2="190" stroke={observeState.stroke} strokeWidth="2" markerEnd="url(#arrow)" />
 
-          return (
-            <button
-              key={node.id}
-              onClick={() => setSelectedNode(node)}
-              className={`p-2.5 rounded-xl border text-left transition-all relative flex flex-col justify-between hover:border-slate-600 ${stateClass}`}
-            >
+          {/* EDGE 3: analyze_and_decide() -> should_continue() */}
+          <line x1="270" y1="280" x2="270" y2="310" stroke={analyzeState.stroke} strokeWidth="2" markerEnd="url(#arrow)" />
+
+          {/* EDGE 4: should_continue() -> vision_fallback() [Left Branch] */}
+          <path d="M 220 360 L 140 360 L 140 400" fill="none" stroke="#a855f7" strokeWidth="2" markerEnd="url(#arrow)" />
+          <rect x="145" y="348" width="85" height="18" rx="4" fill="#0f172a" stroke="#a855f7" strokeWidth="1" />
+          <text x="187" y="361" fill="#c084fc" fontSize="9" fontWeight="bold" textAnchor="middle">REQUEST_VISION</text>
+
+          {/* EDGE 5: should_continue() -> user_confirmation() [Right Branch] */}
+          <path d="M 320 360 L 400 360 L 400 400" fill="none" stroke="#f59e0b" strokeWidth="2" markerEnd="url(#arrow)" />
+          <rect x="310" y="348" width="80" height="18" rx="4" fill="#0f172a" stroke="#f59e0b" strokeWidth="1" />
+          <text x="350" y="361" fill="#fbbf24" fontSize="9" fontWeight="bold" textAnchor="middle">CONFIRM_USER</text>
+
+          {/* EDGE 6: should_continue() -> act() [Default Straight Branch] */}
+          <path d="M 270 410 L 270 510" fill="none" stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrow)" />
+          <rect x="245" y="445" width="50" height="18" rx="4" fill="#0f172a" stroke="#3b82f6" strokeWidth="1" />
+          <text x="270" y="458" fill="#60a5fa" fontSize="9" fontWeight="bold" textAnchor="middle">Default</text>
+
+          {/* EDGE 7: vision_fallback() -> analyze_and_decide() [Loop back UP] */}
+          <path d="M 140 490 L 140 505 L 45 505 L 45 235 L 140 235" fill="none" stroke="#a855f7" strokeWidth="1.5" strokeDasharray="4 4" markerEnd="url(#arrow)" />
+
+          {/* EDGE 8: user_confirmation() -> act() */}
+          <path d="M 400 490 L 400 545 L 390 545" fill="none" stroke="#f59e0b" strokeWidth="2" markerEnd="url(#arrow)" />
+
+          {/* EDGE 9: act() -> End (COMPLETE) */}
+          <path d="M 200 580 L 120 580 L 120 625" fill="none" stroke="#10b981" strokeWidth="2" markerEnd="url(#arrow-emerald)" />
+          <rect x="125" y="570" width="60" height="18" rx="4" fill="#0f172a" stroke="#10b981" strokeWidth="1" />
+          <text x="155" y="583" fill="#34d399" fontSize="9" fontWeight="bold" textAnchor="middle">COMPLETE</text>
+
+          {/* EDGE 10: act() -> observe() [Loop back UP Right Side] */}
+          <path d="M 390 560 L 515 560 L 515 115 L 400 115" fill="none" stroke="#10b981" strokeWidth="1.5" strokeDasharray="4 4" markerEnd="url(#arrow-emerald)" />
+
+
+          {/* NODE: Start */}
+          <g transform="translate(210, 10)">
+            <rect width="120" height="32" rx="16" fill="#020617" stroke="#475569" strokeWidth="2" />
+            <text x="60" y="21" fill="#e2e8f0" fontSize="12" fontWeight="bold" textAnchor="middle">Start</text>
+          </g>
+
+          {/* NODE: observe() */}
+          <foreignObject x="140" y="70" width="260" height="90">
+            <div className={`p-2.5 rounded-xl border h-full transition-all duration-300 ${observeState.bgClass}`}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                  {node.category}
-                </span>
-                {statusBadge}
+                <span className="font-mono text-xs font-bold text-white">observe()</span>
+                <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${observeState.badgeClass}`}>{observeState.badgeText}</span>
               </div>
-              <p className="text-xs font-semibold leading-tight line-clamp-1">
-                {node.label}
-              </p>
-              <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                {node.description}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Selected Node Details Drawer */}
-      {selectedNode && (
-        <div className="mt-3 p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-start justify-between text-xs animate-in fade-in">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getCategoryColor(selectedNode.category)}`}>
-                {selectedNode.category} NODE
-              </span>
-              <span className="font-semibold text-slate-200">{selectedNode.label}</span>
+              <ul className="text-[9px] text-slate-300 space-y-0.5 pl-2 list-disc opacity-90">
+                <li>Start browser (if needed)</li>
+                <li>Navigate to portal URL</li>
+                <li>Extract DOM elements</li>
+              </ul>
             </div>
-            <p className="text-slate-400">{selectedNode.description}</p>
-          </div>
-          <button 
-            onClick={() => setSelectedNode(null)}
-            className="text-slate-500 hover:text-slate-300 text-xs px-2 py-1"
-          >
-            Dismiss
-          </button>
+          </foreignObject>
+
+          {/* NODE: analyze_and_decide() */}
+          <foreignObject x="140" y="190" width="260" height="90">
+            <div className={`p-2.5 rounded-xl border h-full transition-all duration-300 ${analyzeState.bgClass}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-xs font-bold text-white">analyze_and_decide()</span>
+                <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${analyzeState.badgeClass}`}>{analyzeState.badgeText}</span>
+              </div>
+              <ul className="text-[9px] text-slate-300 space-y-0.5 pl-2 list-disc opacity-90">
+                <li>Build prompt (goal + history + DOM)</li>
+                <li>Call LLM (Ollama)</li>
+                <li>Extract ACTION</li>
+              </ul>
+            </div>
+          </foreignObject>
+
+          {/* NODE: should_continue() (Diamond) */}
+          <g transform="translate(270, 360)">
+            <polygon points="0,-50 60,0 0,50 -60,0" fill="#0f172a" stroke="#3b82f6" strokeWidth="2" />
+            <text x="0" y="-5" fill="#93c5fd" fontSize="11" fontWeight="bold" textAnchor="middle">should_continue()</text>
+            <text x="0" y="12" fill="#60a5fa" fontSize="8" textAnchor="middle">Evaluator</text>
+          </g>
+
+          {/* NODE: vision_fallback() */}
+          <foreignObject x="50" y="400" width="180" height="90">
+            <div className={`p-2 rounded-xl border h-full transition-all duration-300 ${visionState.bgClass}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] font-bold flex items-center gap-1 text-purple-300"><Eye className="w-3 h-3" /> vision_fallback()</span>
+                <span className={`text-[7px] font-mono px-1 py-0.5 rounded ${visionState.badgeClass}`}>{visionState.badgeText}</span>
+              </div>
+              <ul className="text-[8px] text-slate-300 space-y-0.5 pl-2 list-disc opacity-90">
+                <li>Take screenshot</li>
+                <li>Run vision model</li>
+                <li>Add vision_analysis</li>
+              </ul>
+            </div>
+          </foreignObject>
+
+          {/* NODE: user_confirmation() */}
+          <foreignObject x="310" y="400" width="180" height="90">
+            <div className={`p-2 rounded-xl border h-full transition-all duration-300 ${userState.bgClass}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] font-bold flex items-center gap-1 text-amber-300"><UserCheck className="w-3 h-3" /> user_confirmation()</span>
+                <span className={`text-[7px] font-mono px-1 py-0.5 rounded ${userState.badgeClass}`}>{userState.badgeText}</span>
+              </div>
+              <ul className="text-[8px] text-slate-300 space-y-0.5 pl-2 list-disc opacity-90">
+                <li>Ask user approval</li>
+                <li>Wait/assume confirm</li>
+              </ul>
+            </div>
+          </foreignObject>
+
+          {/* NODE: act() */}
+          <foreignObject x="140" y="510" width="250" height="85">
+            <div className={`p-2.5 rounded-xl border h-full transition-all duration-300 ${actState.bgClass}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-xs font-bold text-white">act()</span>
+                <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${actState.badgeClass}`}>{actState.badgeText}</span>
+              </div>
+              <ul className="text-[9px] text-slate-300 space-y-0.5 pl-2 list-disc opacity-90">
+                <li>CLICK(selector) / TYPE(selector, text)</li>
+                <li>NAVIGATE(url) / Update status</li>
+              </ul>
+            </div>
+          </foreignObject>
+
+          {/* NODE: End */}
+          <g transform="translate(60, 625)">
+            <rect width="120" height="32" rx="16" fill="#020617" stroke="#10b981" strokeWidth="2" />
+            <text x="60" y="21" fill="#34d399" fontSize="12" fontWeight="bold" textAnchor="middle">End</text>
+          </g>
+        </svg>
+
+        {/* Loopback Status Footer */}
+        <div className="text-[10px] font-mono text-slate-400 flex items-center justify-center gap-1.5 mt-2 py-1 border-t border-slate-800 w-full">
+          <CornerDownRight className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Active Loop: <span className="text-white font-bold">act() ➔ observe()</span></span>
         </div>
-      )}
+      </div>
     </div>
   );
 };

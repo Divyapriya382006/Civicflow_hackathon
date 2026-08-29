@@ -1,0 +1,45 @@
+WORKFLOW ID:
+uidai_address_update
+
+PORTAL:
+Official UIDAI portal
+
+FLOW:
+
+1. Open browser.
+2. Open new tab.
+3. Navigate to the approved UIDAI entry point.
+4. Verify official domain.
+5. Open the Aadhaar/My Aadhaar service area.
+6. Locate the current Aadhaar update service.
+7. Select the address-update workflow.
+8. Inspect the current page.
+9. Identify login/authentication requirements.
+10. Begin login.
+11. If OTP is required:
+      STOP FOR HUMAN AUTHENTICATION.
+12. After authentication:
+      verify successful login.
+13. Locate address update option.
+14. Inspect required address fields.
+15. Map each field to verified user-provided data.
+16. Enter the new address.
+17. Inspect document requirements.
+18. Identify the approved proof-of-address document.
+19. Compare document information with entered address.
+20. If contradiction:
+      STOP.
+21. Upload the document to the correct field.
+22. Verify that the document was accepted.
+23. Check validation messages.
+24. Open preview/review.
+25. Compare displayed data with verified user data.
+26. Run contradiction detection.
+27. Run workflow-state verification.
+28. Calculate confidence.
+29. STOP FOR HUMAN APPROVAL before final consequential submission.
+30. After approval, submit.
+31. Verify submission result.
+32. Capture acknowledgement/reference number if available.
+33. Write audit record.
+34. Finish.
