@@ -7,8 +7,24 @@ class DOMExtractor:
         # Fast async DOM extraction with data-testid priority
         elements = await page.locator('[data-testid],input,select,textarea,button,a,[role]').evaluate_all('''els => els.map(el => {
           const testId = el.getAttribute('data-testid');
-          const selector = testId ? `[data-testid="${testId}"]` : (el.id ? `#${CSS.escape(el.id)}` : `${el.tagName.toLowerCase()}[name="${el.getAttribute('name') || ''}"]`);
-          const label = el.labels?.[0]?.innerText || el.getAttribute('aria-label') || el.innerText || el.getAttribute('name') || null;
+          const id = el.id;
+          const name = el.getAttribute('name');
+          const type = el.getAttribute('type');
+          
+          // Generate selector with priority: data-testid > id > name > tag+type
+          let selector;
+          if (testId) {
+            selector = `[data-testid="${testId}"]`;
+          } else if (id) {
+            selector = `#${CSS.escape(id)}`;
+          } else if (name) {
+            selector = `${el.tagName.toLowerCase()}[name="${CSS.escape(name)}"]`;
+          } else {
+            // Fallback: use tag with position
+            selector = el.tagName.toLowerCase();
+          }
+          
+          const label = el.labels?.[0]?.innerText || el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.innerText || el.getAttribute('name') || null;
           const rect = el.getBoundingClientRect();
           return {
             tag: el.tagName.toLowerCase(),
@@ -18,6 +34,7 @@ class DOMExtractor:
             required: Boolean(el.required),
             visible: rect.width > 0 && rect.height > 0,
             enabled: !el.disabled,
+            type: type || 'unknown',
             bounding_box: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }
           };
         })''')

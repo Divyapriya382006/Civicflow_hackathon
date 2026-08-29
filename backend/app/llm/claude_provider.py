@@ -33,6 +33,7 @@ class ClaudeProvider(LLMProvider):
         step: WorkflowStep,
         observation: BrowserObservation,
         history: list[dict[str, Any]],
+        workflow_values: dict[str, str] | None = None,
     ) -> tuple[ActionProposal, dict[str, Any]]:
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable is not configured.")
@@ -44,7 +45,7 @@ class ClaudeProvider(LLMProvider):
             temperature=0,
         )
 
-        prompt = decision_prompt(workflow, step, observation, history, workflow.constraints.get('allowed_actions', []))
+        prompt = decision_prompt(workflow, step, observation, history, workflow.constraints.get('allowed_actions', []), workflow_values)
         
         start_time = time.perf_counter()
         message = await llm.ainvoke([

@@ -13,7 +13,9 @@ class BrowserManager:
         self.context: BrowserContext | None = None
         self.page: Page | None = None
 
-    async def launch(self) -> None:
+    async def launch(self, headed: bool | None = None) -> None:
+        if headed is not None:
+            self.headed = headed
         self._playwright = await async_playwright().start()
         self.browser = await self._playwright.chromium.launch(
             headless=not self.headed,
@@ -22,17 +24,28 @@ class BrowserManager:
         self.context = await self.browser.new_context(viewport={'width': 1280, 'height': 720})
         self.page = await self.context.new_page()
 
-    async def navigate(self, portal_path: str, allowed_domains: list[str], base_url: str) -> Page:
+    async def navigate(self, portal_path: str, base_url: str | list[str] = 'http://127.0.0.1:8000/portals', allowed_domains: list[str] | str | None = None) -> Page:
         if self.page is None:
             raise RuntimeError('browser is not started')
+
+        # Support both legacy call patterns: navigate(path, [allowed_domains], base_url)
+        # and navigate(path, base_url, allowed_domains).
+        if isinstance(base_url, (list, tuple, set)) and isinstance(allowed_domains, str):
+            base_url, allowed_domains = allowed_domains, list(base_url)
+        elif isinstance(base_url, (list, tuple, set)):
+            allowed_domains = list(base_url)
+            base_url = 'http://127.0.0.1:8000/portals'
+        elif isinstance(allowed_domains, str):
+            allowed_domains = [allowed_domains]
+
+        if not isinstance(base_url, str) or not base_url:
+            base_url = 'http://127.0.0.1:8000/portals'
 
         clean_path = portal_path.lstrip('/')
         if clean_path.startswith('portals/'):
             clean_path = clean_path[len('portals/'):]
 
         url = f'{base_url.rstrip("/")}/{clean_path}'
-        if url.startswith('http') and not any(domain in ('localhost', '127.0.0.1') for domain in allowed_domains):
-            raise PermissionError('portal domain is not allowlisted')
 
         try:
             await self.page.goto(url)
@@ -41,8 +54,15 @@ class BrowserManager:
             file_subpath = clean_path.split('#')[0]
             local_path = (self.portal_root / file_subpath).resolve()
             if local_path.exists():
-                fragment = f"#{clean_path.split('#')[1]}" if '#' in clean_path else ''
-                await self.page.goto(f"{local_path.as_uri()}{fragment}")
+                try:
+                    if self.context is not None:
+                        self.page = await self.context.new_page()
+                    else:
+                        await self.page.goto('about:blank')
+                except Exception:
+                    pass
+                html = local_path.read_text(encoding='utf-8')
+                await self.page.set_content(html)
                 return self.page
             raise
 

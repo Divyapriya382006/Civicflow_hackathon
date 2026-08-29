@@ -3,6 +3,7 @@ import asyncio
 from fastapi import WebSocket
 from ..schemas import RuntimeEvent
 
+
 class EventHub:
     def __init__(self):
         self.clients: dict[str, set[WebSocket]] = {}
@@ -11,8 +12,14 @@ class EventHub:
     async def connect(self, session_id: str, websocket: WebSocket) -> None:
         await websocket.accept()
         self.clients.setdefault(session_id, set()).add(websocket)
+        # Replay any events that fired before the WebSocket connected (catch-up)
         for event in self.history.get(session_id, []):
-            await websocket.send_json(event.model_dump(mode='json'))
+            try:
+                await websocket.send_json(event.model_dump(mode='json'))
+            except Exception:
+                # Client disconnected during replay — stop and remove
+                self.clients.get(session_id, set()).discard(websocket)
+                break
 
     def disconnect(self, session_id: str, websocket: WebSocket) -> None:
         self.clients.get(session_id, set()).discard(websocket)
@@ -23,7 +30,10 @@ class EventHub:
         if not clients:
             return
         payload = event.model_dump(mode='json')
-        results = await asyncio.gather(*(client.send_json(payload) for client in clients), return_exceptions=True)
+        results = await asyncio.gather(
+            *(client.send_json(payload) for client in clients),
+            return_exceptions=True,
+        )
         for client, result in zip(clients, results):
             if isinstance(result, Exception):
                 self.disconnect(event.session_id, client)

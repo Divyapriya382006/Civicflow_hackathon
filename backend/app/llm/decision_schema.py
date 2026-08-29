@@ -14,28 +14,35 @@ class DecisionValidator:
 
         if isinstance(raw, str):
             text = raw.strip()
-            
-            # Extract JSON block from markdown fences or text wrapper
+
+            # Clean markdown code fences if present
             if '```' in text:
-                match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-                if match:
-                    text = match.group(1)
-                else:
-                    text = re.sub(r'^```(?:json)?\s*', '', text)
-                    text = re.sub(r'\s*```$', '', text).strip()
+                text = re.sub(r'^```[a-zA-Z]*\s*', '', text)
+                text = re.sub(r'\s*```$', '', text).strip()
 
-            if not (text.startswith('{') and text.endswith('}')):
-                match = re.search(r'\{.*\}', text, re.DOTALL)
-                if match:
-                    text = match.group(0)
+            # Extract outer JSON braces ({ ... })
+            start_idx = text.find('{')
+            end_idx = text.rfind('}')
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                text = text[start_idx:end_idx + 1]
 
+            # Try direct JSON parse
             try:
                 parsed = json.loads(text)
+                return ActionProposal.model_validate(parsed)
             except json.JSONDecodeError:
-                # Fallback clean single quote / formatting
-                cleaned = re.sub(r"'([^'\"]*)':", r'"\1":', text)
-                parsed = json.loads(cleaned)
+                pass
 
-            return ActionProposal.model_validate(parsed)
+            # Safe regex repair for single-quoted keys/strings without corrupting inner apostrophes
+            try:
+                repaired = re.sub(r"(?<=[\{\,\s])'([^'\"]+)'(?=\s*:)", r'"\1"', text)
+                repaired = re.sub(r"(?<=:\s*)'([^'\"]+)'(?=[\}\,\s])", r'"\1"', repaired)
+                parsed = json.loads(repaired)
+                return ActionProposal.model_validate(parsed)
+            except Exception:
+                pass
+
+            # Fallback directly to Pydantic JSON parser
+            return ActionProposal.model_validate_json(text)
 
         raise ValueError(f"Cannot validate action proposal from raw data type: {type(raw)}")

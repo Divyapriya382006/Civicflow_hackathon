@@ -80,6 +80,8 @@ export interface WorkflowStep {
   };
 }
 
+export type ExtractionHint = 'name' | 'date' | 'number' | 'phone' | 'address' | 'free_text';
+
 export interface ServiceFieldDefinition {
   id: string;
   label: string;
@@ -87,6 +89,7 @@ export interface ServiceFieldDefinition {
   placeholder?: string;
   defaultValue?: string;
   options?: string[];
+  voiceHint?: ExtractionHint;
   required: boolean;
   isSensitivePII: boolean;
   piiTokenName?: string;

@@ -32,9 +32,9 @@ export const DEPARTMENTS_CATALOG: Department[] = [
           { id: 'poa_proof', name: 'Proof of Address Document', description: 'Certified government ID or utility bill', format: 'PDF / JPEG', sampleName: 'Address_Proof_Document.pdf' }
         ],
         fields: [
-          { id: 'aadhaar_number', label: '12-Digit Aadhaar Number', type: 'text', placeholder: '849249103841', defaultValue: '849249103841', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
-          { id: 'new_address', label: 'New Residential Address', type: 'text', placeholder: 'Plot 42, Green Valley Enclave, Sector 14', defaultValue: 'Plot 42, Green Valley Enclave, Sector 14', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' },
-          { id: 'pincode', label: 'Pincode', type: 'text', placeholder: '560001', defaultValue: '560001', required: true, isSensitivePII: false },
+          { id: 'aadhaar_number', label: '12-Digit Aadhaar Number', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
+          { id: 'new_address', label: 'New Residential Address', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' },
+          { id: 'pincode', label: 'Pincode', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false },
           { id: 'doc_type', label: 'Proof Document Type', type: 'select', options: ['Passport', 'Voter ID', 'Ration Card', 'Electricity Bill'], defaultValue: 'Passport', required: true, isSensitivePII: false }
         ],
         steps: [
@@ -78,7 +78,7 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'aadhaar_id', label: 'Aadhaar / DigiLocker ID', type: 'text', placeholder: '849249103841', defaultValue: '849249103841', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
+          { id: 'aadhaar_id', label: 'Aadhaar / DigiLocker ID', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
           { id: 'doc_type', label: 'Document Type', type: 'select', options: ['Aadhaar Card', 'PAN Card Verification Record', 'Driving License', 'Class XII Marksheet'], defaultValue: 'Aadhaar Card', required: true, isSensitivePII: false },
           { id: 'authority', label: 'Issuing Authority', type: 'select', options: ['UIDAI', 'Income Tax Department', 'Ministry of Road Transport', 'CBSE'], defaultValue: 'UIDAI', required: true, isSensitivePII: false }
         ],
@@ -119,11 +119,11 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '2004-01-01', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
           { id: 'passport_type', label: 'Application Type', type: 'select', options: ['Fresh Passport', 'Re-issue Passport'], defaultValue: 'Fresh Passport', required: true, isSensitivePII: false },
           { id: 'booklet', label: 'Booklet Type', type: 'select', options: ['36 Pages', '60 Pages'], defaultValue: '36 Pages', required: true, isSensitivePII: false },
-          { id: 'address', label: 'Permanent Address', type: 'text', placeholder: 'Plot 42, Green Valley Enclave, Bengaluru', defaultValue: 'Plot 42, Green Valley Enclave, Bengaluru', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' }
+          { id: 'address', label: 'Permanent Address', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' }
         ],
         steps: [
           {
@@ -173,11 +173,11 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'child_name', label: 'Child Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '2004-01-01', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
-          { id: 'mother_name', label: 'Mother Full Name', type: 'text', placeholder: 'Radha K', defaultValue: 'Radha K', required: true, isSensitivePII: true, piiTokenName: 'MOTHER_NAME_03' },
-          { id: 'father_name', label: 'Father Full Name', type: 'text', placeholder: 'Krishnan R', defaultValue: 'Krishnan R', required: true, isSensitivePII: true, piiTokenName: 'FATHER_NAME_04' },
-          { id: 'hospital', label: 'Hospital / Place of Birth', type: 'text', placeholder: 'St. Martha Maternity Hospital, Bengaluru', defaultValue: 'St. Martha Maternity Hospital, Bengaluru', required: true, isSensitivePII: false }
+          { id: 'child_name', label: 'Child Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
+          { id: 'mother_name', label: 'Mother Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'MOTHER_NAME_03' },
+          { id: 'father_name', label: 'Father Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'FATHER_NAME_04' },
+          { id: 'hospital', label: 'Hospital / Place of Birth', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {
@@ -216,10 +216,10 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'deceased_name', label: 'Deceased Full Name', type: 'text', placeholder: 'Late Krishnan R', defaultValue: 'Late Krishnan R', required: true, isSensitivePII: true, piiTokenName: 'DECEASED_NAME_08' },
-          { id: 'dod', label: 'Date of Death', type: 'date', defaultValue: '2026-01-15', required: true, isSensitivePII: false },
-          { id: 'applicant_name', label: 'Informant Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'place_of_death', label: 'Place of Death', type: 'text', placeholder: 'Bengaluru East Hospital', defaultValue: 'Bengaluru East Hospital', required: true, isSensitivePII: false }
+          { id: 'deceased_name', label: 'Deceased Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DECEASED_NAME_08' },
+          { id: 'dod', label: 'Date of Death', type: 'date', defaultValue: '', required: true, isSensitivePII: false },
+          { id: 'applicant_name', label: 'Informant Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'place_of_death', label: 'Place of Death', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {
@@ -268,8 +268,8 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'dl_number', label: 'Driving Licence Number', type: 'text', placeholder: 'KA-0120200049102', defaultValue: 'KA-0120200049102', required: true, isSensitivePII: true, piiTokenName: 'DL_TOKEN_99' },
-          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '2004-01-01', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
+          { id: 'dl_number', label: 'Driving Licence Number', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DL_TOKEN_99' },
+          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
           { id: 'state', label: 'State Jurisdiction', type: 'select', options: ['Karnataka', 'Maharashtra', 'Tamil Nadu', 'Delhi'], defaultValue: 'Karnataka', required: true, isSensitivePII: false },
           { id: 'rto_office', label: 'RTO Office', type: 'select', options: ['KA-01 Bengaluru Central', 'MH-01 Mumbai South', 'TN-01 Chennai Central', 'DL-01 Delhi Central'], defaultValue: 'KA-01 Bengaluru Central', required: true, isSensitivePII: false }
         ],
@@ -320,8 +320,8 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'annual_income', label: 'Annual Family Income (₹)', type: 'text', placeholder: '120000', defaultValue: '120000', required: true, isSensitivePII: false },
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'annual_income', label: 'Annual Family Income (₹)', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false },
           { id: 'purpose', label: 'Purpose of Certificate', type: 'select', options: ['Education Scholarship', 'Fee Concession', 'Government Housing Scheme', 'Social Welfare Scheme'], defaultValue: 'Education Scholarship', required: true, isSensitivePII: false }
         ],
         steps: [
@@ -360,9 +360,9 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'years_of_residence', label: 'Years of Residence', type: 'text', placeholder: '10', defaultValue: '10', required: true, isSensitivePII: false },
-          { id: 'address', label: 'Residential Address', type: 'text', placeholder: 'Plot 42, Green Valley Enclave, Bengaluru', defaultValue: 'Plot 42, Green Valley Enclave, Bengaluru', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' }
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'years_of_residence', label: 'Years of Residence', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false },
+          { id: 'address', label: 'Residential Address', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'ADDRESS_TOKEN_71' }
         ],
         steps: [
           {
@@ -411,10 +411,10 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'applicant_name', label: 'Applicant Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'spouse_name', label: 'Spouse Full Name', type: 'text', placeholder: 'Karthik M', defaultValue: 'Karthik M', required: true, isSensitivePII: true, piiTokenName: 'SPOUSE_NAME_05' },
-          { id: 'marriage_date', label: 'Date of Marriage', type: 'date', defaultValue: '2025-11-20', required: true, isSensitivePII: false },
-          { id: 'registrar_office', label: 'Place / Sub-Registrar Office', type: 'text', placeholder: 'Sub-Registrar Office, Jayanagar', defaultValue: 'Sub-Registrar Office, Jayanagar', required: true, isSensitivePII: false }
+          { id: 'applicant_name', label: 'Applicant Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'spouse_name', label: 'Spouse Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'SPOUSE_NAME_05' },
+          { id: 'marriage_date', label: 'Date of Marriage', type: 'date', defaultValue: '', required: true, isSensitivePII: false },
+          { id: 'registrar_office', label: 'Place / Sub-Registrar Office', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {
@@ -464,13 +464,13 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '2004-01-01', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
-          { id: 'mobile', label: 'Mobile Contact Number', type: 'tel', placeholder: '9845012345', defaultValue: '9845012345', required: true, isSensitivePII: true, piiTokenName: 'PHONE_TOKEN_55' },
-          { id: 'email', label: 'Email Address', type: 'email', placeholder: 'priya@example.com', defaultValue: 'priya@example.com', required: true, isSensitivePII: true, piiTokenName: 'EMAIL_TOKEN_33' },
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
+          { id: 'mobile', label: 'Mobile Contact Number', type: 'tel', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'PHONE_TOKEN_55' },
+          { id: 'email', label: 'Email Address', type: 'email', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'EMAIL_TOKEN_33' },
           { id: 'qualification', label: 'Highest Qualification', type: 'select', options: ['High School', 'Diploma', "Bachelor's Degree", "Master's Degree", 'Doctorate'], defaultValue: "Bachelor's Degree", required: true, isSensitivePII: false },
           { id: 'sector', label: 'Preferred Job Sector', type: 'select', options: ['Information Technology', 'Healthcare', 'Manufacturing', 'Education', 'Banking & Finance'], defaultValue: 'Information Technology', required: true, isSensitivePII: false },
-          { id: 'years_experience', label: 'Years of Experience', type: 'text', placeholder: '2', defaultValue: '2', required: true, isSensitivePII: false }
+          { id: 'years_experience', label: 'Years of Experience', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {
@@ -514,9 +514,9 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', placeholder: '849249103841', defaultValue: '849249103841', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
-          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '2004-01-01', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'aadhaar_number', label: 'Aadhaar Number', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'AADHAAR_TOKEN_94' },
+          { id: 'dob', label: 'Date of Birth', type: 'date', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'DOB_TOKEN_12' },
           { id: 'occupation_category', label: 'Occupation Category', type: 'select', options: ['Construction', 'Domestic Work', 'Agriculture', 'Street Vendor', 'Other'], defaultValue: 'Construction', required: true, isSensitivePII: false },
           { id: 'income_range', label: 'Monthly Income Range', type: 'select', options: ['Below ₹10,000', '₹10,000 - ₹15,000', '₹15,000 - ₹20,000', 'Above ₹20,000'], defaultValue: 'Below ₹10,000', required: true, isSensitivePII: false },
           { id: 'state', label: 'State', type: 'select', options: ['Karnataka', 'Maharashtra', 'Tamil Nadu', 'Delhi'], defaultValue: 'Karnataka', required: true, isSensitivePII: false },
@@ -576,11 +576,11 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'worker_id', label: 'Worker ID', type: 'text', placeholder: 'WRK-984012', defaultValue: 'WRK-984012', required: true, isSensitivePII: true, piiTokenName: 'WORKER_ID_77' },
+          { id: 'worker_id', label: 'Worker ID', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'WORKER_ID_77' },
           { id: 'claim_type', label: 'Claim Type', type: 'select', options: ['Medical', 'Maternity', 'Accident', 'Education Assistance'], defaultValue: 'Medical', required: true, isSensitivePII: false },
-          { id: 'claim_amount', label: 'Claim Amount', type: 'text', placeholder: '15000', defaultValue: '15000', required: true, isSensitivePII: false },
-          { id: 'bank_account_number', label: 'Bank Account Number', type: 'text', placeholder: '984102941029', defaultValue: '984102941029', required: true, isSensitivePII: true, piiTokenName: 'BANK_TOKEN_91' },
-          { id: 'ifsc_code', label: 'Bank IFSC Code', type: 'text', placeholder: 'SBIN0004120', defaultValue: 'SBIN0004120', required: true, isSensitivePII: false }
+          { id: 'claim_amount', label: 'Claim Amount', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false },
+          { id: 'bank_account_number', label: 'Bank Account Number', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'BANK_TOKEN_91' },
+          { id: 'ifsc_code', label: 'Bank IFSC Code', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {
@@ -624,11 +624,11 @@ export const DEPARTMENTS_CATALOG: Department[] = [
         ],
         requiredDocs: [],
         fields: [
-          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: 'Priya R K', defaultValue: 'Priya R K', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
-          { id: 'mobile', label: 'Mobile Contact Number', type: 'tel', placeholder: '9845012345', defaultValue: '9845012345', required: true, isSensitivePII: true, piiTokenName: 'PHONE_TOKEN_55' },
+          { id: 'full_name', label: 'Full Name', type: 'text', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'USER_NAME_42' },
+          { id: 'mobile', label: 'Mobile Contact Number', type: 'tel', placeholder: '', defaultValue: '', required: true, isSensitivePII: true, piiTokenName: 'PHONE_TOKEN_55' },
           { id: 'course', label: 'Select Skill Course', type: 'select', options: ['Electrician', 'Plumbing', 'Tailoring', 'Data Entry', 'Welding'], defaultValue: 'Electrician', required: true, isSensitivePII: false },
           { id: 'training_center', label: 'Preferred Training Center', type: 'select', options: ['Govt ITI Bengaluru Central', 'Regional Skill Institute Mumbai', 'Apex Vocational Center Chennai', 'Delhi Kaushal Vikas Kendra'], defaultValue: 'Govt ITI Bengaluru Central', required: true, isSensitivePII: false },
-          { id: 'preferred_batch_date', label: 'Preferred Batch Date', type: 'date', defaultValue: '2026-09-15', required: true, isSensitivePII: false }
+          { id: 'preferred_batch_date', label: 'Preferred Batch Date', type: 'date', defaultValue: '', required: true, isSensitivePII: false }
         ],
         steps: [
           {

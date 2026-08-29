@@ -25,16 +25,27 @@ class LLMProvider(ABC):
         step: WorkflowStep,
         observation: BrowserObservation,
         history: list[dict[str, Any]],
+        workflow_values: dict[str, str] | None = None,
     ) -> tuple[ActionProposal, dict[str, Any]]:
         """
         Generates a structured action proposal and returns (ActionProposal, telemetry_metrics).
-        telemetry_metrics dict:
-            prompt_tokens: int
-            completion_tokens: int
-            inference_ms: float
-            tokens_per_sec: float
-            model: str
-            provider: str
+        
+        Args:
+            workflow: The workflow definition
+            step: The current workflow step
+            observation: The current browser observation (DOM + text)
+            history: Previous action history (last N actions)
+            workflow_values: Dictionary of workflow-specific values (e.g. user-entered form data)
+        
+        Returns:
+            Tuple of (ActionProposal, telemetry_metrics)
+            telemetry_metrics dict:
+                prompt_tokens: int
+                completion_tokens: int
+                inference_ms: float
+                tokens_per_sec: float
+                model: str
+                provider: str
         """
         ...
 

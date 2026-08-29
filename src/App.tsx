@@ -68,6 +68,7 @@ export default function App() {
   const [runtimeEvents, setRuntimeEvents] = useState<RuntimeEvent[]>([]);
   const [runtimeSessionId, setRuntimeSessionId] = useState<string | null>(null);
   const unsubscribeRuntime = useRef<(() => void) | null>(null);
+  const intakeFormRef = useRef<Record<string, string>>({});
 
   // Anomaly, Contradiction, & Attack Isolation State
   const [contradiction, setContradiction] = useState<ContradictionItem | null>(null);
@@ -127,8 +128,8 @@ export default function App() {
       setContradiction({
         id: 'CONT-DOB-01',
         field: 'Date of Birth',
-        userValue: '2004-01-01',
-        documentValue: '2003-01-01',
+        userValue: applicantData.dob || '',
+        documentValue: '',
         severity: 'HIGH',
         reason: 'Entered Date of Birth differs from official document OCR scan.',
         resolved: false,
@@ -176,16 +177,53 @@ export default function App() {
 
   // Start the backend runtime; all subsequent state comes from its event stream.
   const handleStartWorkflow = async () => {
+    if (isExecuting) return;
     setViewMode('WORKSPACE');
     setIsWorkflowCompleted(false);
     setIsPausedForHITL(false);
     setIsExecuting(true);
     setCurrentStepIndex(0);
     setRuntimeEvents([]);
-    const session = await startRuntimeSession(selectedService.id, {
-      full_name: applicantData.fullName,
-      license_number: applicantData.aadhaarNumber,
+
+    const latestForm = { ...DEFAULT_APPLICANT, ...applicantData, ...intakeFormRef.current };
+    const workflowValues: Record<string, string> = {};
+
+    const normalize = (value: string | undefined | null): string =>
+      typeof value === 'string' ? value.trim() : '';
+
+    selectedService.fields.forEach((field) => {
+      const directValue = normalize(intakeFormRef.current[field.id] ?? (latestForm as Record<string, string | undefined>)[field.id]);
+      if (directValue) {
+        workflowValues[field.id] = directValue;
+      }
     });
+
+    const fullName = normalize(latestForm.fullName);
+    const aadhaarNumber = normalize(latestForm.aadhaarNumber);
+    const pincode = normalize(latestForm.pincode);
+    const address = normalize(latestForm.address);
+    const dob = normalize(latestForm.dob);
+    const mobile = normalize(latestForm.mobile);
+
+    if (fullName) {
+      workflowValues.full_name = workflowValues.full_name || fullName;
+      workflowValues.applicant_name = workflowValues.applicant_name || fullName;
+      workflowValues.worker_name = workflowValues.worker_name || fullName;
+      workflowValues.child_name = workflowValues.child_name || fullName;
+    }
+    if (aadhaarNumber) {
+      workflowValues.aadhaar_number = workflowValues.aadhaar_number || aadhaarNumber;
+      workflowValues.license_number = workflowValues.license_number || aadhaarNumber;
+    }
+    if (mobile) workflowValues.mobile_number = workflowValues.mobile_number || mobile;
+    if (pincode) workflowValues.pincode = workflowValues.pincode || pincode;
+    if (address) {
+      workflowValues.new_address = workflowValues.new_address || address;
+      workflowValues.address = workflowValues.address || address;
+    }
+    if (dob) workflowValues.dob = workflowValues.dob || dob;
+
+    const session = await startRuntimeSession(selectedService.id, workflowValues);
     setRuntimeSessionId(session.session_id);
     unsubscribeRuntime.current?.();
     unsubscribeRuntime.current = subscribeToRuntime(session.session_id, (event) => {
@@ -221,7 +259,6 @@ export default function App() {
   const handleResolveContradiction = () => {
     if (contradiction) {
       setContradiction({ ...contradiction, resolved: true });
-      setApplicantData({ ...applicantData, dob: '2004-01-01', ocrExtractedDob: '2004-01-01' });
       setSignals({
         domMatch: 0.98,
         pageText: 0.99,
@@ -296,6 +333,7 @@ export default function App() {
 
   // Service intake form submission
   const handleIntakeSubmit = (formData: Record<string, string>, docData: { name: string; size: string; hash: string; hmac: string }) => {
+    intakeFormRef.current = { ...formData };
     setApplicantData((prev) => ({
       ...prev,
       ...formData,

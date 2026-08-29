@@ -37,8 +37,9 @@ class OllamaDecisionClient(LLMProvider):
         step: WorkflowStep,
         observation: BrowserObservation,
         history: list[dict[str, Any]],
+        workflow_values: dict[str, str] | None = None,
     ) -> tuple[ActionProposal, dict[str, Any]]:
-        prompt = decision_prompt(workflow, step, observation, history, workflow.constraints.get('allowed_actions', []))
+        prompt = decision_prompt(workflow, step, observation, history, workflow.constraints.get('allowed_actions', []), workflow_values)
         
         start_time = time.perf_counter()
         message = await self.llm.ainvoke([

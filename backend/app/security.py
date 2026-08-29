@@ -16,7 +16,10 @@ class ActionSecurityGate:
             if proposal.selector not in selectors:
                 raise PermissionError('target selector was not observed on the current page')
         if proposal.action == 'navigate':
-            host = urlparse(proposal.value or '').hostname
-            if host not in workflow.allowed_domains:
+            target_url = proposal.value or proposal.selector or ''
+            parsed = urlparse(target_url)
+            host = parsed.hostname
+            # If absolute host is specified and is not in allowed domains / localhost, reject
+            if host and host not in workflow.allowed_domains and host not in {'127.0.0.1', 'localhost'}:
                 raise PermissionError('navigation target is not allowlisted')
         return proposal

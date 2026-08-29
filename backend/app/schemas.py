@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
-ActionName = Literal['navigate', 'click', 'fill', 'select', 'upload', 'wait', 'read']
+ActionName = Literal['navigate', 'click', 'fill', 'type', 'select', 'upload', 'wait', 'read']
 
 class WorkflowStep(BaseModel):
     id: str
@@ -46,6 +46,7 @@ class ObservationElement(BaseModel):
     required: bool = False
     visible: bool
     enabled: bool
+    type: str = 'unknown'
     bounding_box: dict[str, float] | None = None
 
 class BrowserObservation(BaseModel):

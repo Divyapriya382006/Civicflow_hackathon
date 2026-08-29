@@ -5,15 +5,18 @@
   "goal": "Find the license record and verify its current status.",
   "portal_path": "/transport/license-lookup.html",
   "allowed_domains": ["127.0.0.1", "localhost"],
-  "required_information": ["license_number"],
+  "required_information": ["license_number", "date_of_birth", "state", "rto"],
   "required_documents": [],
-  "instructions": ["Enter the license number", "Search for the record", "Verify the returned status"],
+  "instructions": ["Enter the license number", "Enter date of birth", "Select state", "Select RTO", "Search for the record", "Verify the returned status"],
   "steps": [
-    {"id": "license", "intent": "Enter the license number", "action": "fill", "value_ref": "license_number", "risk": "LOW"},
+    {"id": "dl_number", "intent": "Enter the driving license number", "action": "fill", "value_ref": "license_number", "risk": "LOW"},
+    {"id": "dob", "intent": "Enter the date of birth", "action": "fill", "value_ref": "date_of_birth", "risk": "LOW"},
+    {"id": "state", "intent": "Select the state jurisdiction", "action": "select", "value_ref": "state", "risk": "LOW"},
+    {"id": "rto", "intent": "Select the RTO office", "action": "select", "value_ref": "rto", "risk": "LOW"},
     {"id": "search", "intent": "Search for the license record", "action": "click", "target_text": "Search", "risk": "LOW"},
     {"id": "verify", "intent": "Verify the returned license status", "action": "read", "target_text": "Active", "risk": "LOW"}
   ],
-  "constraints": {"allow_mutations": false, "allowed_actions": ["fill", "click", "read", "wait"]},
+  "constraints": {"allow_mutations": false, "allowed_actions": ["fill", "click", "read", "wait", "select"]},
   "risk_rules": {},
   "verification_rules": [{"type": "required_element"}, {"type": "page_state"}],
   "completion_conditions": [{"type": "text_present", "text": "Active"}]
