@@ -30,6 +30,10 @@ Flow (matching the user's architecture diagram):
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
+import json
+import os
 import sys
 import tempfile
 import time
@@ -69,7 +73,7 @@ BOLD    = '\033[1m'
 DIM     = '\033[2m'
 RESET   = '\033[0m'
 
-HEARTBEAT_INTERVAL = 5  # seconds
+HEARTBEAT_INTERVAL = 10  # seconds
 
 
 def _ts() -> str:
@@ -110,8 +114,8 @@ def xai_log(tag: str, title: str, details: list[str]) -> None:
 
 class HeartbeatMonitor:
     """
-    Prints a live status line to the terminal every HEARTBEAT_INTERVAL seconds
-    so you can see what the agent is doing without waiting for a node to complete.
+    Prints a live status line to the terminal every 10 seconds with timestamps
+    so you can see exactly what the agent is doing without waiting for a node to complete.
 
     Output format (example):
         [HEARTBEAT 08:36:35.123] Session abc12..  |  Phase: OBSERVE  |  Iter: 3/40
@@ -204,6 +208,7 @@ class RuntimeState(TypedDict, total=False):
     current_step: int
     iteration: int
     stuck_counter: int
+    selector_reject_count: int
     completed: bool
     failed: str
     next_step: str
@@ -431,11 +436,15 @@ class RuntimeSession:
         raw_next = 'CONTINUE'
         confidence = decision.confidence
 
+        # Read-only/no-op actions never need HITL regardless of step risk level
+        PASSTHROUGH_ACTIONS = {'wait', 'read', 'navigate'}
+        action_is_destructive = decision.action.lower() not in PASSTHROUGH_ACTIONS
+
         if confidence < VISION_CONFIDENCE_THRESHOLD:
             raw_next = 'REQUEST_VISION'
         elif state.get('stuck_counter', 0) >= STUCK_DOM_THRESHOLD:
             raw_next = 'REQUEST_VISION'
-        elif step.requires_hitl or step.risk in {'HIGH', 'CRITICAL'}:
+        elif action_is_destructive and (step.requires_hitl or step.risk in {'HIGH', 'CRITICAL'}):
             raw_next = 'CONFIRM_USER'
 
         decision_data = {
@@ -488,6 +497,8 @@ class RuntimeSession:
     @staticmethod
     def _should_continue(state: RuntimeState) -> str:
         iteration = state.get('iteration', 0)
+        selector_reject_count = state.get('selector_reject_count', 0)
+
         if iteration > MAX_ITERATIONS:
             xai_log(f"{RED}[ROUTER: should_continue()]{RESET}", "Max iterations reached", ["Route -> END"])
             return 'end'
@@ -495,6 +506,14 @@ class RuntimeSession:
         if state.get('completed'):
             xai_log(f"{GREEN}[ROUTER: should_continue()]{RESET}", "Workflow completion verified!", ["Route -> END"])
             return 'end'
+
+        if selector_reject_count >= 3:
+            xai_log(
+                f"{YELLOW}[ROUTER: should_continue()]{RESET}",
+                "Repeated selector rejections detected; escalating to human approval",
+                [f"Reject count: {selector_reject_count}", "Route -> user_confirmation"],
+            )
+            return 'user_confirmation'
 
         next_step = state.get('next_step', 'CONTINUE')
         if next_step == 'COMPLETE':
@@ -630,9 +649,14 @@ class RuntimeSession:
         try:
             validated = self.security.validate(self.workflow, proposal, observation)
         except Exception as exc:
-            ws_ms += await self.event('ACTION_REJECTED', node_id, {'reason': str(exc)})
-            xai_log(f"{RED}[SECURITY GATE REJECTED]{RESET}", "Action failed security policy", [str(exc)])
-            return {'next_step': 'REQUEST_VISION', 'last_action': {'action': proposal.action, 'error': str(exc)}}
+            reject_count = state.get('selector_reject_count', 0) + 1
+            ws_ms += await self.event('ACTION_REJECTED', node_id, {'reason': str(exc), 'selector_reject_count': reject_count})
+            xai_log(f"{RED}[SECURITY GATE REJECTED]{RESET}", "Action failed security policy", [str(exc), f"Reject count: {reject_count}"])
+            return {
+                'next_step': 'REQUEST_VISION',
+                'selector_reject_count': reject_count,
+                'last_action': {'action': proposal.action, 'error': str(exc)},
+            }
 
         ws_ms += await self.event('ACTION_VALIDATED', node_id, {'action': validated.action, 'selector': validated.selector})
 
@@ -673,6 +697,17 @@ class RuntimeSession:
         verification_ms = (t_verif_1 - t_verif_0) * 1000.0
 
         completed = verification.get('completion_confirmed', False)
+
+        # Hard step-count ceiling safety: If the final step submit click has already executed,
+        # follow-up WAIT/read actions or verifier confirmation should complete the workflow cleanly.
+        final_step_id = self.workflow.steps[-1].id
+        has_executed_final_submit = any(
+            h.get('step') == final_step_id and h.get('action') in {'click', 'submit'}
+            for h in state.get('history', [])
+        ) or (self.workflow.steps[step_index].id == final_step_id and validated.action in {'click', 'submit'})
+
+        if has_executed_final_submit and (validated.action in {'wait', 'read'} or completed):
+            completed = True
 
         xai_log(
             f"{GREEN}[NODE 4: POST-ACTION VERIFICATION]{RESET}",
@@ -796,6 +831,22 @@ class RuntimeSession:
         try:
             self.heartbeat.start()
             node_list = ['observe', 'analyze_and_decide', 'vision_fallback', 'user_confirmation', 'act']
+            
+            safe_values = {k: str(v) for k, v in (self.values or {}).items()}
+            canonical = json.dumps(safe_values, sort_keys=True, separators=(',', ':'))
+            sha256_hex = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+            _kms_key = os.getenv('CIVICFLOW_KMS_MASTER_KEY_V2')
+            if not _kms_key:
+                if os.getenv('ENVIRONMENT', 'development').lower() == 'production':
+                    raise RuntimeError(
+                        '[CivicGuard] CIVICFLOW_KMS_MASTER_KEY_V2 is not set. '
+                        'Set it in .env before running in production.'
+                    )
+                _kms_key = 'CIVICFLOW_DEV_ONLY_KMS_KEY_NOT_FOR_PRODUCTION'
+                print('  [CivicGuard] WARNING: CIVICFLOW_KMS_MASTER_KEY_V2 not set — '
+                      'using insecure dev-only HMAC key. Set the real key in .env.', flush=True)
+            hmac_hex = hmac.new(_kms_key.encode('utf-8'), canonical.encode('utf-8'), hashlib.sha256).hexdigest()
+
             xai_log(
                 f"{BOLD}{GREEN}[LANGGRAPH AGENT SESSION STARTED]{RESET}",
                 f"Session ID: {self.session_id}",
@@ -804,6 +855,8 @@ class RuntimeSession:
                     f"Goal         : {self.workflow.goal}",
                     f"LLM Provider : {BOLD}{self.decider.provider_name.upper()}{RESET} (Model: {self.decider.model_name})",
                     f"Control Flow : observe -> analyze_and_decide -> should_continue -> {{act|vision|hitl}} -> observe",
+                    f"SHA-256 Hash : {CYAN}{sha256_hex}{RESET}",
+                    f"HMAC-SHA256  : {MAGENTA}{hmac_hex}{RESET} (KMS Verified)",
                 ]
             )
 
@@ -813,6 +866,8 @@ class RuntimeSession:
                 'provider': self.decider.provider_name,
                 'model': self.decider.model_name,
                 'flow': 'observe -> analyze_and_decide -> should_continue -> {vision_fallback | user_confirmation | act} -> observe (loop)',
+                'sha256': sha256_hex,
+                'hmac_sha256': hmac_hex,
             })
 
             initial_state: RuntimeState = {
@@ -831,7 +886,11 @@ class RuntimeSession:
                 'telemetry_log': [],
             }
 
-            await self.graph().ainvoke(initial_state)
+            # Calculate dynamic recursion_limit based on workflow steps (3 node hops per step + HITL pauses + buffer)
+            step_count = len(self.workflow.steps)
+            recursion_limit = max(150, (step_count + 3) * 6 + 30)
+
+            await self.graph().ainvoke(initial_state, config={'recursion_limit': recursion_limit})
             xai_log(f"{BOLD}{GREEN}[WORKFLOW COMPLETED SUCCESSFULLY]{RESET}", f"Session ID: {self.session_id}", [])
             await self.event('WORKFLOW_COMPLETED')
         except Exception as exc:

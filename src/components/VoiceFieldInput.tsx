@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Mic, RotateCcw, Check, Keyboard, Loader2, AlertCircle } from 'lucide-react';
 import { ServiceFieldDefinition } from '../types';
+import { normalizeDateValue } from '../utils/fieldValidation';
 
 interface VoiceFieldInputProps {
   field: ServiceFieldDefinition;
@@ -38,6 +39,7 @@ export const VoiceFieldInput: React.FC<VoiceFieldInputProps> = ({ field, value, 
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const recognitionRef = useRef<any | null>(null);
+  const finalTranscriptRef = useRef<string>('');
 
   const voiceHint = useMemo(() => {
     if (field.voiceHint) return field.voiceHint;
@@ -70,18 +72,26 @@ export const VoiceFieldInput: React.FC<VoiceFieldInputProps> = ({ field, value, 
 
     setError('');
     setLiveTranscript('');
+    finalTranscriptRef.current = '';
     setIsListening(true);
     const recognition = new SpeechRecognitionImpl();
-    recognition.continuous = false;
-    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.interimResults = false;
     recognition.lang = 'en-IN';
 
     recognition.onresult = (event: any) => {
-      let transcript = '';
-      for (let i = 0; i < event.results.length; i += 1) {
-        transcript += event.results[i][0].transcript;
+      const finalTranscriptParts: string[] = [];
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        if (event.results[i].isFinal) {
+          const text = event.results[i][0]?.transcript?.trim();
+          if (text) finalTranscriptParts.push(text);
+        }
       }
-      setLiveTranscript(transcript.trim());
+      const finalTranscript = finalTranscriptParts.join(' ').trim();
+      if (finalTranscript) {
+        finalTranscriptRef.current = finalTranscript;
+        setLiveTranscript(finalTranscript);
+      }
     };
 
     recognition.onerror = (event: any) => {
@@ -91,8 +101,11 @@ export const VoiceFieldInput: React.FC<VoiceFieldInputProps> = ({ field, value, 
 
     recognition.onend = () => {
       setIsListening(false);
-      if (liveTranscript.trim()) {
-        setConfirmedTranscript(liveTranscript.trim());
+      const finalTranscript = finalTranscriptRef.current.trim();
+      if (finalTranscript) {
+        const processed = (field.type === 'date' || voiceHint === 'date') ? normalizeDateValue(finalTranscript) : finalTranscript;
+        setConfirmedTranscript(processed);
+        setLiveTranscript(processed);
       }
     };
 
@@ -101,11 +114,13 @@ export const VoiceFieldInput: React.FC<VoiceFieldInputProps> = ({ field, value, 
   };
 
   const handleConfirm = () => {
-    const finalValue = confirmedTranscript.trim();
-    if (!finalValue) {
+    const raw = confirmedTranscript.trim();
+    if (!raw) {
       setError('Please capture or type a value before confirming.');
       return;
     }
+    const finalValue = (field.type === 'date' || voiceHint === 'date') ? normalizeDateValue(raw) : raw;
+    setConfirmedTranscript(finalValue);
     onChange(field.id, finalValue);
     setError('');
   };

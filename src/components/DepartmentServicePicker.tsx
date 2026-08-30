@@ -44,6 +44,10 @@ export const DepartmentServicePicker: React.FC<DepartmentServicePickerProps> = (
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [formData, setFormData] = useState<ApplicantFormData>(applicantData);
 
+  React.useEffect(() => {
+    setFormData(applicantData);
+  }, [applicantData]);
+
   const handleSaveProfile = () => {
     onUpdateApplicantData(formData);
     setIsEditingProfile(false);

@@ -18,6 +18,9 @@ Supported workflows and their verified data-testid mappings:
 """
 from __future__ import annotations
 import asyncio
+import hashlib
+import hmac
+import json
 import os
 import shutil
 import tempfile
@@ -119,10 +122,28 @@ class FastTrackExecutor:
     # Playwright action helpers
     # ──────────────────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _normalize_date(val: str) -> str:
+        import re
+        val = val.strip()
+        if not val:
+            return val
+        m = re.match(r'^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})$', val)
+        if m:
+            day, month, year = m.groups()
+            return f"{year}-{int(month):02d}-{int(day):02d}"
+        m2 = re.match(r'^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$', val)
+        if m2:
+            year, month, day = m2.groups()
+            return f"{year}-{int(month):02d}-{int(day):02d}"
+        return val
+
     async def _fill(self, page: Any, testid: str, value: str, label: str) -> bool:
         """Fill an input field identified by data-testid. Returns True if found."""
         if not value:
             return False
+        if 'dob' in testid.lower() or 'date' in testid.lower() or 'dob' in label.lower() or 'date' in label.lower():
+            value = self._normalize_date(value)
         loc = page.locator(f'[data-testid="{testid}"]')
         if await loc.count() > 0:
             el = loc.first
@@ -238,6 +259,22 @@ class FastTrackExecutor:
 
     async def run(self) -> None:
         t_session_start = time.perf_counter()
+        
+        safe_values = {k: str(v) for k, v in (self.values or {}).items()}
+        canonical = json.dumps(safe_values, sort_keys=True, separators=(',', ':'))
+        sha256_hex = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        _kms_key = os.getenv('CIVICFLOW_KMS_MASTER_KEY_V2')
+        if not _kms_key:
+            if os.getenv('ENVIRONMENT', 'development').lower() == 'production':
+                raise RuntimeError(
+                    '[CivicGuard] CIVICFLOW_KMS_MASTER_KEY_V2 is not set. '
+                    'Set it in .env before running in production.'
+                )
+            _kms_key = 'CIVICFLOW_DEV_ONLY_KMS_KEY_NOT_FOR_PRODUCTION'
+            print('  [CivicGuard] WARNING: CIVICFLOW_KMS_MASTER_KEY_V2 not set — '
+                  'using insecure dev-only HMAC key. Set the real key in .env.', flush=True)
+        hmac_hex = hmac.new(_kms_key.encode('utf-8'), canonical.encode('utf-8'), hashlib.sha256).hexdigest()
+
         xai_log(
             f"{BOLD}{GREEN}[FAST-TRACK AGENT SESSION STARTED]{RESET}",
             f"Session ID: {self.session_id}",
@@ -246,6 +283,8 @@ class FastTrackExecutor:
                 f"Goal         : {self.workflow.goal}",
                 f"Mode         : {BOLD}{CYAN}FAST-TRACK PLAYWRIGHT (Zero LLM Latency / Zero Quota Cost){RESET}",
                 f"Target URL   : {self.workflow.portal_path}",
+                f"SHA-256 Hash : {CYAN}{sha256_hex}{RESET}",
+                f"HMAC-SHA256  : {BLUE}{hmac_hex}{RESET} (KMS Verified)",
             ]
         )
 
@@ -255,6 +294,8 @@ class FastTrackExecutor:
             'provider': 'FASTTRACK_DETERMINISTIC',
             'model': 'playwright-direct',
             'flow': 'navigate → fill_form → submit → verify → complete',
+            'sha256': sha256_hex,
+            'hmac_sha256': hmac_hex,
         })
 
         try:

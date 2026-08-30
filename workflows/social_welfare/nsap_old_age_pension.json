@@ -13,7 +13,7 @@
     {"id": "scheme", "intent": "Choose the welfare scheme category", "action": "select", "value_ref": "scheme_type", "risk": "LOW"},
     {"id": "submit", "intent": "Submit the pension application", "action": "click", "target_text": "Submit Pension Application", "risk": "CRITICAL", "requires_hitl": true}
   ],
-  "constraints": {"allow_mutations": true, "allowed_actions": ["fill", "select", "click", "wait"]},
+  "constraints": {"allow_mutations": true, "allowed_actions": ["type", "fill", "select", "click", "wait"]},
   "risk_rules": {"submit": {"requires_hitl": true}},
   "verification_rules": [{"type": "required_element"}, {"type": "page_state"}],
   "completion_conditions": [{"type": "success_message", "text": "Pension application received"}]

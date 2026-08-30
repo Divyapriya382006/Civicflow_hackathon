@@ -18,6 +18,11 @@ import {
 import { ServiceWorkflow, Department, SupportedLanguage } from '../types';
 import { getTranslation } from '../i18n/translations';
 import { VoiceFieldInput } from './VoiceFieldInput';
+import {
+  buildSelectPrompt,
+  resolveSelectChoice,
+  validateFieldValue,
+} from '../utils/fieldValidation';
 
 interface ServiceIntakeViewProps {
   department: Department;
@@ -64,10 +69,35 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
   const nextVoiceTimerRef = useRef<number | null>(null);
   const isTransitioningRef = useRef<boolean>(false);
   const voiceSessionRef = useRef<number>(0);
+  const noSpeechRetriesRef = useRef<Record<string, number>>({});
 
   const voiceFields = service.fields;
   const currentVoiceField = voiceFields[voiceStepIndex];
   const voiceLogEndpoint = 'http://127.0.0.1:8000/voice/log';
+
+  const displayFieldValue = (field: (typeof service.fields)[number] | undefined, value: string) => {
+    if (!field || !value) return value;
+    if (field.type === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+      return value.trim();
+    }
+    return value;
+  };
+
+  React.useEffect(() => {
+    stopVoiceCapture();
+    setEntryMode('type');
+    setVoicePrompt('');
+    setVoiceCapturedValue('');
+    setVoiceStatus('');
+    setVoiceStepIndex(0);
+    setIsVoiceListening(false);
+    formDataRef.current = {};
+    const nextDefaults: Record<string, string> = {};
+    service.fields.forEach((field) => {
+      nextDefaults[field.id] = field.defaultValue || '';
+    });
+    setFormData(nextDefaults);
+  }, [service.id]);
 
   const logVoiceEvent = async (phase: string, field: string, text: string) => {
     const payload = { phase, field, text };
@@ -107,11 +137,18 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
 
   const normalizeVoiceValue = (field: (typeof service.fields)[number], rawValue: string) => {
     const value = rawValue.trim();
-    if (field.type !== 'date' || !value) return value;
+    if (!value) return value;
+
+    if (field.type === 'select' && field.options?.length) {
+      const resolved = resolveSelectChoice(field, value);
+      if (resolved) return resolved;
+      return value;
+    }
+
+    if (field.type !== 'date') return value;
 
     const lower = value.toLowerCase();
-    const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(value);
-    if (isoMatch) return value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
 
     const monthMap: Record<string, number> = {
       january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
@@ -124,34 +161,38 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
       return year;
     };
 
-    const match = value.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{2,4})/i);
-    if (match) {
-      const day = Number(match[1]);
-      const month = monthMap[match[2].toLowerCase()];
-      const year = toFourDigitYear(Number(match[3]));
-      if (month && year) {
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      }
-    }
-
-    const slashMatch = value.match(/(\d{1,2})\s*[/\-]\s*(\d{1,2})\s*[/\-]\s*(\d{2,4})/);
-    if (slashMatch) {
-      const day = Number(slashMatch[1]);
-      const month = Number(slashMatch[2]);
-      const year = toFourDigitYear(Number(slashMatch[3]));
+    const parseIsoDate = (day: number, month: number, year: number) => {
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const normalizedYear = toFourDigitYear(year);
+        return `${normalizedYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       }
+      return null;
+    };
+
+    const monthNameMatch = value.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{2,4})/i);
+    if (monthNameMatch) {
+      const iso = parseIsoDate(Number(monthNameMatch[1]), monthMap[monthNameMatch[2].toLowerCase()], Number(monthNameMatch[3]));
+      if (iso) return iso;
     }
 
-    const monthName = Object.keys(monthMap).find((m) => lower.includes(m));
+    const numericDateMatch = value.match(/(\d{1,2})\s*[/\-]\s*(\d{1,2})\s*[/\-]\s*(\d{2,4})/);
+    if (numericDateMatch) {
+      const iso = parseIsoDate(Number(numericDateMatch[1]), Number(numericDateMatch[2]), Number(numericDateMatch[3]));
+      if (iso) return iso;
+    }
+
+    const monthNameOnlyMatch = value.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{2,4})/i);
+    if (monthNameOnlyMatch) {
+      const iso = parseIsoDate(Number(monthNameOnlyMatch[2]), monthMap[monthNameOnlyMatch[1].toLowerCase()], Number(monthNameOnlyMatch[3]));
+      if (iso) return iso;
+    }
+
+    const monthNameDiscovery = Object.keys(monthMap).find((m) => lower.includes(m));
     const dayNumMatch = value.match(/(\d{1,2})(?:st|nd|rd|th)?/);
     const yearMatch = value.match(/(\d{2,4})/);
-    if (monthName && dayNumMatch && yearMatch) {
-      const day = Number(dayNumMatch[1]);
-      const month = monthMap[monthName];
-      const year = toFourDigitYear(Number(yearMatch[1]));
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (monthNameDiscovery && dayNumMatch && yearMatch) {
+      const iso = parseIsoDate(Number(dayNumMatch[1]), monthMap[monthNameDiscovery], Number(yearMatch[1]));
+      if (iso) return iso;
     }
 
     return value;
@@ -187,12 +228,42 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
     setIsVoiceListening(false);
   };
 
+  const advanceToNextVoiceField = (currentFieldIndex: number) => {
+    const nextIndex = currentFieldIndex + 1;
+    const nextField = voiceFields[nextIndex];
+
+    if (nextField) {
+      nextVoiceTimerRef.current = window.setTimeout(() => {
+        recognitionRef.current = null;
+        isTransitioningRef.current = false;
+        setIsVoiceListening(false);
+        startVoiceCapture(nextField, nextIndex);
+      }, 650);
+      return;
+    }
+
+    nextVoiceTimerRef.current = window.setTimeout(() => {
+      const finalPrompt = 'All details captured. Please say yes to continue or no to review.';
+      setVoiceStatus(finalPrompt);
+      setVoicePrompt(finalPrompt);
+      void logVoiceEvent('prompt', 'final-confirmation', finalPrompt);
+      speakText(finalPrompt);
+      recognitionRef.current = null;
+      isTransitioningRef.current = false;
+      setIsVoiceListening(false);
+      startVoiceConfirmation();
+    }, 650);
+  };
+
   const startVoiceCapture = (field: (typeof service.fields)[number], fieldIndex: number) => {
-    if (isVoiceListening && recognitionRef.current) return;
-    if (isTransitioningRef.current) return;
+    if (nextVoiceTimerRef.current) {
+      window.clearTimeout(nextVoiceTimerRef.current);
+      nextVoiceTimerRef.current = null;
+    }
 
     const sessionId = Date.now() + Math.random();
     voiceSessionRef.current = sessionId;
+    noSpeechRetriesRef.current[field.id] = 0;
     stopVoiceCapture();
     isTransitioningRef.current = true;
 
@@ -205,92 +276,149 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
 
     voiceTranscriptRef.current = '';
     setVoiceCapturedValue('');
-    setIsVoiceListening(true);
     setVoiceStepIndex(fieldIndex);
 
-    const promptText = `Please tell me your ${field.label}.`;
+    const promptText = field.type === 'select' && field.options?.length
+      ? buildSelectPrompt(field)
+      : `Please tell me your ${field.label}.`;
     setVoicePrompt(promptText);
     void logVoiceEvent('prompt', field.id, promptText);
-    speakText(promptText);
 
-    const recognition = new SpeechRecognitionImpl();
-    recognition.lang = 'en-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((result: any) => result?.[0]?.transcript || '')
-        .join(' ')
-        .trim();
-
-      if (!transcript) return;
-
-      if (field.type !== 'date' && looksLikeDateText(transcript)) {
-        const dateWarning = `I heard a date for ${field.label}. Please tell me the ${field.label.toLowerCase()} again.`;
-        setVoiceStatus(dateWarning);
-        speakText(dateWarning);
-        return;
-      }
-
-      const normalized = normalizeVoiceValue(field, transcript);
-      voiceTranscriptRef.current = normalized;
-      setVoiceCapturedValue(normalized);
-      if (normalized) {
-        handleFieldChange(field.id, normalized);
-      }
-      console.log('[CivicFlow Voice] Final answer candidate:', normalized);
-    };
-
-    recognition.onerror = (event: any) => {
+    const beginListening = () => {
       if (voiceSessionRef.current !== sessionId) return;
-      setVoiceStatus(`Could not capture the response. ${event?.error || 'Please try again.'}`);
-      setIsVoiceListening(false);
-      isTransitioningRef.current = false;
-    };
+      setIsVoiceListening(true);
 
-    recognition.onend = () => {
-      if (voiceSessionRef.current !== sessionId || !isTransitioningRef.current) return;
-      setIsVoiceListening(false);
-      const transcript = voiceTranscriptRef.current.trim();
+      const recognition = new SpeechRecognitionImpl();
+      recognition.lang = 'en-IN';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
-      if (!transcript) {
-        setVoiceStatus('I did not catch that. Please say it again.');
-        speakText('I did not catch that. Please say it again.');
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result?.[0]?.transcript || '')
+          .join(' ')
+          .trim();
+
+        if (!transcript) return;
+
+        if (field.type !== 'date' && looksLikeDateText(transcript)) {
+          const dateWarning = `I heard a date for ${field.label}. Please tell me the ${field.label.toLowerCase()} again.`;
+          setVoiceStatus(dateWarning);
+          speakText(dateWarning);
+          try {
+            recognition.stop();
+          } catch {
+            // no-op
+          }
+          return;
+        }
+
+        const normalized = normalizeVoiceValue(field, transcript);
+        const validation = validateFieldValue(field, normalized);
+        if (field.type === 'select' && field.options?.length && !validation.valid) {
+          const errorPrompt = validation.message || `I did not catch a valid option. ${buildSelectPrompt(field)}`;
+          setVoiceStatus(errorPrompt);
+          speakText(errorPrompt);
+          return;
+        }
+
+        voiceTranscriptRef.current = normalized;
+        setVoiceCapturedValue(normalized);
+        if (normalized && validation.valid) {
+          handleFieldChange(field.id, normalized);
+          try {
+            recognition.stop();
+          } catch {
+            // no-op
+          }
+        }
+        console.log('[CivicFlow Voice] Final answer candidate:', normalized);
+      };
+
+      recognition.onerror = (event: any) => {
+        if (voiceSessionRef.current !== sessionId) return;
+        if (event?.error === 'no-speech' || event?.error === 'aborted') {
+          const currentRetries = noSpeechRetriesRef.current[field.id] ?? 0;
+          if (currentRetries >= 1) {
+            setVoiceStatus('I did not hear anything. Please tap Speak and say your answer again.');
+            setIsVoiceListening(false);
+            isTransitioningRef.current = false;
+            return;
+          }
+          noSpeechRetriesRef.current[field.id] = currentRetries + 1;
+          return;
+        }
+        setVoiceStatus(`Could not capture the response. ${event?.error || 'Please try again.'}`);
+        setIsVoiceListening(false);
         isTransitioningRef.current = false;
-        nextVoiceTimerRef.current = window.setTimeout(() => startVoiceCapture(field, fieldIndex), 1200);
-        return;
-      }
+      };
 
-      const normalizedTranscript = normalizeVoiceValue(field, voiceTranscriptRef.current);
-      handleFieldChange(field.id, normalizedTranscript);
-      console.log('[CivicFlow Voice] Saved answer for field:', field.label, normalizedTranscript);
-      void logVoiceEvent('answer', field.id, normalizedTranscript);
-      setVoiceStatus(`Saved ${field.label}.`);
-      speakText(`Saved ${field.label}.`);
-      isTransitioningRef.current = false;
+      recognition.onend = () => {
+        if (voiceSessionRef.current !== sessionId) return;
 
-      const nextIndex = fieldIndex + 1;
-      if (nextIndex < voiceFields.length) {
-        const nextField = voiceFields[nextIndex];
-        nextVoiceTimerRef.current = window.setTimeout(() => {
-          if (nextField) startVoiceCapture(nextField, nextIndex);
-        }, 250);
-      } else {
-        nextVoiceTimerRef.current = window.setTimeout(() => {
-          const finalPrompt = 'All details captured. Please say yes to continue or no to review.';
-          setVoiceStatus(finalPrompt);
-          setVoicePrompt(finalPrompt);
-          void logVoiceEvent('prompt', 'final-confirmation', finalPrompt);
-          speakText(finalPrompt);
-          startVoiceConfirmation();
-        }, 250);
-      }
+        if (isTransitioningRef.current && !voiceTranscriptRef.current.trim()) {
+          setVoiceStatus('Listening...');
+          setIsVoiceListening(true);
+          try {
+            recognition.start();
+          } catch {
+            // ignore restart errors while the browser is still settling
+          }
+          return;
+        }
+
+        if (!isTransitioningRef.current) return;
+
+        setIsVoiceListening(false);
+        const transcript = voiceTranscriptRef.current.trim();
+
+        if (!transcript) {
+          const currentRetries = noSpeechRetriesRef.current[field.id] ?? 0;
+          if (currentRetries >= 1 || field.type === 'select') {
+            setVoiceStatus(field.type === 'select'
+              ? 'I did not hear a valid option. Please say 1 or 2, or the option text itself.'
+              : 'I did not hear anything. Please say your answer again.');
+            isTransitioningRef.current = false;
+            return;
+          }
+          noSpeechRetriesRef.current[field.id] = currentRetries + 1;
+          setVoiceStatus('I did not catch that. Please say it again.');
+          speakText('I did not catch that. Please say it again.');
+          isTransitioningRef.current = false;
+          nextVoiceTimerRef.current = window.setTimeout(() => startVoiceCapture(field, fieldIndex), 1200);
+          return;
+        }
+
+        const normalizedTranscript = normalizeVoiceValue(field, voiceTranscriptRef.current);
+        const validation = validateFieldValue(field, normalizedTranscript);
+        if (!validation.valid) {
+          const retryPrompt = validation.message || `Please provide a valid ${field.label.toLowerCase()}.`;
+          setVoiceStatus(retryPrompt);
+          speakText(retryPrompt);
+          isTransitioningRef.current = false;
+          nextVoiceTimerRef.current = window.setTimeout(() => startVoiceCapture(field, fieldIndex), 1200);
+          return;
+        }
+
+        handleFieldChange(field.id, normalizedTranscript);
+        console.log('[CivicFlow Voice] Saved answer for field:', field.label, normalizedTranscript);
+        void logVoiceEvent('answer', field.id, normalizedTranscript);
+        setVoiceStatus(`Saved ${field.label}.`);
+        speakText(`Saved ${field.label}.`);
+        isTransitioningRef.current = false;
+        advanceToNextVoiceField(fieldIndex);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
     };
 
-    recognitionRef.current = recognition;
-    recognition.start();
+    speakText(promptText, () => {
+      window.setTimeout(() => {
+        beginListening();
+      }, 450);
+    });
   };
 
   const startVoiceConfirmation = () => {
@@ -378,6 +506,7 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
   const startVoiceFlow = () => {
     console.log('[CivicFlow Voice] Starting voice intake flow');
     stopVoiceCapture();
+    noSpeechRetriesRef.current = {};
     voiceSessionRef.current = Date.now() + Math.random();
     setEntryMode('voice');
     setVoiceStepIndex(0);
@@ -389,18 +518,21 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
     speakText(greeting, () => {
       const firstField = voiceFields[0];
       if (firstField) {
-        nextVoiceTimerRef.current = window.setTimeout(() => startVoiceCapture(firstField, 0), 250);
+        nextVoiceTimerRef.current = window.setTimeout(() => startVoiceCapture(firstField, 0), 700);
       }
     });
   };
 
   const handleFieldChange = (fieldId: string, value: string) => {
+    const field = service.fields.find((candidate) => candidate.id === fieldId);
+    const normalized = field ? normalizeVoiceValue(field, value) : value;
+
     setFormData((prev) => {
-      const next = { ...prev, [fieldId]: value };
+      const next = { ...prev, [fieldId]: normalized };
       formDataRef.current = next;
       return next;
     });
-    formDataRef.current = { ...formDataRef.current, [fieldId]: value };
+    formDataRef.current = { ...formDataRef.current, [fieldId]: normalized };
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,6 +545,18 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
 
   const handleProceed = () => {
     const latestFormData = { ...formDataRef.current };
+    const invalidField = service.fields.find((field) => {
+      const value = latestFormData[field.id] ?? '';
+      const result = validateFieldValue(field, value);
+      return !result.valid;
+    });
+
+    if (invalidField) {
+      const message = validateFieldValue(invalidField, latestFormData[invalidField.id] ?? '').message;
+      setVoiceStatus(message || `Please check ${invalidField.label}.`);
+      return;
+    }
+
     onStartApplication(latestFormData, {
       name: uploadedDocName,
       size: uploadedDocSize,
@@ -523,7 +667,7 @@ export const ServiceIntakeView: React.FC<ServiceIntakeViewProps> = ({
             <p className="text-emerald-50/90">{voicePrompt || 'Hello! I am CivicFlow. I will ask for the details needed to complete your application.'}</p>
             {voiceCapturedValue && (
               <div className="rounded-xl border border-emerald-500/40 bg-slate-950/80 px-3 py-2 text-xs text-slate-200">
-                Captured: <span className="font-semibold text-white">{voiceCapturedValue}</span>
+                Captured: <span className="font-semibold text-white">{displayFieldValue(currentVoiceField, voiceCapturedValue)}</span>
               </div>
             )}
             {voiceStatus && (

@@ -13,7 +13,7 @@
     {"id": "review", "intent": "Review the entered name", "action": "click", "target_text": "Review", "risk": "MEDIUM"},
     {"id": "submit", "intent": "Submit the correction", "action": "click", "target_text": "Submit", "risk": "HIGH", "requires_hitl": true}
   ],
-  "constraints": {"allow_mutations": true, "allowed_actions": ["fill", "click", "wait"]},
+  "constraints": {"allow_mutations": true, "allowed_actions": ["type", "fill", "click", "wait"]},
   "risk_rules": {"submit": {"requires_hitl": true}},
   "verification_rules": [{"type": "required_element"}, {"type": "page_state"}],
   "completion_conditions": [{"type": "success_message", "text": "Application received"}]

@@ -11,7 +11,7 @@ class ActionSecurityGate:
             raise PermissionError(f'action not allowed: {proposal.action}')
         if any(token in (proposal.selector or '').lower() for token in self.forbidden):
             raise PermissionError('unsafe selector or execution payload')
-        if proposal.action in {'click', 'fill', 'select', 'upload'}:
+        if proposal.action in {'click', 'fill', 'type', 'select', 'upload'}:
             selectors = {element.selector for element in observation.elements if element.visible and element.enabled}
             if proposal.selector not in selectors:
                 raise PermissionError('target selector was not observed on the current page')

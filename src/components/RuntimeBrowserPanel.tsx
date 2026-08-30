@@ -28,15 +28,47 @@ export const RuntimeBrowserPanel: React.FC<RuntimeBrowserPanelProps> = ({
   const currentStep = service.steps[currentStepIndex] || service.steps[0];
 
   const formEntries = useMemo(() => {
-    const merged: Record<string, string> = { ...applicantData };
+    const seen = new Set<string>();
+    const entries: Array<{ key: string; value: string }> = [];
+
+    const addEntry = (key: string, rawValue: string) => {
+      const value = rawValue.trim();
+      if (!value) return;
+
+      const dedupeKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (seen.has(dedupeKey)) return;
+
+      seen.add(dedupeKey);
+      entries.push({ key, value });
+    };
+
     service.fields.forEach((field) => {
-      const value = applicantData[field.id] ?? applicantData[field.id.toLowerCase()] ?? applicantData[field.label.toLowerCase().replace(/\s+/g, '_')];
-      if (typeof value === 'string' && value.trim()) merged[field.label] = value.trim();
+      const value =
+        applicantData[field.id] ??
+        applicantData[field.id.toLowerCase()] ??
+        applicantData[field.label.toLowerCase().replace(/\s+/g, '_')] ??
+        applicantData[field.label];
+
+      if (typeof value === 'string') addEntry(field.label, value);
     });
 
-    return Object.entries(merged)
-      .filter(([, value]) => typeof value === 'string' && value.trim())
-      .map(([key, value]) => ({ key, value: String(value).trim() }));
+    Object.entries(applicantData).forEach(([key, value]) => {
+      if (typeof value !== 'string' || !value.trim()) return;
+
+      const normalizedKey = key.trim().toLowerCase();
+      const isServiceFieldKey = service.fields.some((field) =>
+        field.id.toLowerCase() === normalizedKey ||
+        field.label.toLowerCase() === normalizedKey ||
+        field.label.toLowerCase().replace(/\s+/g, '_') === normalizedKey ||
+        field.id.toLowerCase() === normalizedKey.replace(/_/g, '')
+      );
+
+      if (!isServiceFieldKey) {
+        addEntry(key, value);
+      }
+    });
+
+    return entries;
   }, [applicantData, service.fields]);
 
   const generateGovernmentPdf = () => {

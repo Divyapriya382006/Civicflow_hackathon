@@ -1,5 +1,8 @@
 from __future__ import annotations
 import asyncio
+import hashlib
+import hmac
+import json
 import os
 import sys
 import time
@@ -99,7 +102,13 @@ def create_fallback_workflow(workflow_id: str) -> WorkflowDefinition:
         portal_path=portal_path,
         allowed_domains=['127.0.0.1', 'localhost'],
         steps=steps,
-        constraints={'allowed_actions': ['navigate', 'click', 'fill', 'select', 'upload', 'wait']}
+        constraints={'allowed_actions': ['navigate', 'click', 'fill', 'type', 'select', 'upload', 'wait', 'read']},
+        completion_conditions=[
+            {'type': 'text_present', 'text': 'Application Registered'},
+            {'type': 'text_present', 'text': 'Application Received'},
+            {'type': 'text_present', 'text': 'Application Submitted'},
+            {'type': 'text_present', 'text': 'Request Received'},
+        ]
     )
 
 
@@ -124,6 +133,36 @@ from .runtime.fasttrack import FastTrackExecutor
 
 last_created_sessions: dict[str, tuple[str, float]] = {}
 
+
+def log_session_integrity_summary(workflow_id: str, values: dict[str, str]) -> None:
+    safe_values = {key: str(value) for key, value in (values or {}).items()}
+    canonical = json.dumps(safe_values, sort_keys=True, separators=(',', ':'))
+    sha256_hex = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+    _kms_key = os.getenv('CIVICFLOW_KMS_MASTER_KEY_V2')
+    if not _kms_key:
+        if os.getenv('ENVIRONMENT', 'development').lower() == 'production':
+            raise RuntimeError(
+                '[CivicGuard] CIVICFLOW_KMS_MASTER_KEY_V2 is not set. '
+                'Set it in .env before running in production.'
+            )
+        _kms_key = 'CIVICFLOW_DEV_ONLY_KMS_KEY_NOT_FOR_PRODUCTION'
+        print('  [CivicGuard] WARNING: CIVICFLOW_KMS_MASTER_KEY_V2 not set — '
+              'using insecure dev-only HMAC key. Set the real key in .env.', flush=True)
+    hmac_hex = hmac.new(_kms_key.encode('utf-8'), canonical.encode('utf-8'), hashlib.sha256).hexdigest()
+
+    xai_log(
+        "[SECURITY HASH]",
+        f"Integrity fingerprint for workflow {workflow_id}",
+        [
+            f"Workflow ID : {workflow_id}",
+            f"Field Count : {len(safe_values)}",
+            f"Canonical JSON : {canonical}",
+            f"SHA-256     : {sha256_hex}",
+            f"HMAC-SHA256 : {hmac_hex}",
+        ],
+    )
+
+
 @app.post('/sessions')
 async def start_session(request: StartRequest) -> dict:
     now = time.time()
@@ -135,18 +174,22 @@ async def start_session(request: StartRequest) -> dict:
     workflow = workflows.get(request.workflow_id)
     if workflow is None:
         workflow = create_fallback_workflow(request.workflow_id)
-    
+
+    log_session_integrity_summary(workflow.id, request.values)
+
     session_id = uuid.uuid4().hex
     last_created_sessions[request.workflow_id] = (session_id, now)
 
     async def emit(event: RuntimeEvent) -> None:
         await hub.publish(event)
 
-    mode = os.getenv('EXECUTION_MODE', 'fasttrack').lower()
-    if mode in {'fasttrack', 'auto'}:
+    mode = os.getenv('EXECUTION_MODE', 'llm').lower()
+    if mode in {'fasttrack', 'direct', 'deterministic'}:
         session = FastTrackExecutor(session_id, workflow, request.values, emit, ROOT / 'portals', 'http://127.0.0.1:8000/portals')
+        execution_label = 'FAST-TRACK PLAYWRIGHT DIRECT (Zero LLM Latency)'
     else:
         session = RuntimeSession(session_id, workflow, request.values, emit, ROOT / 'portals', 'http://127.0.0.1:8000/portals')
+        execution_label = f"LLM STATE MACHINE ({session.decider.provider_name.upper()})"
 
     try:
         xai_log(
@@ -156,7 +199,7 @@ async def start_session(request: StartRequest) -> dict:
                 f"Session ID  : {session_id}",
                 f"Workflow ID : {workflow.id}",
                 f"Target URL  : {workflow.portal_path}",
-                f"Execution   : {BOLD}{CYAN}FAST-TRACK PLAYWRIGHT DIRECT (Zero LLM Latency){RESET}" if mode in {'fasttrack', 'auto'} else f"LLM State Machine ({session.decider.provider_name.upper()})",
+                f"Execution   : {BOLD}{CYAN}{execution_label}{RESET}",
                 f"Action      : Spawning asynchronous task...",
             ]
         )

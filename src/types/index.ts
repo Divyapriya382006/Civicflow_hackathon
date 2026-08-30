@@ -82,6 +82,12 @@ export interface WorkflowStep {
 
 export type ExtractionHint = 'name' | 'date' | 'number' | 'phone' | 'address' | 'free_text';
 
+export interface FieldConstraintRule {
+  type: 'minLength' | 'maxLength' | 'pattern' | 'contains' | 'required' | 'enum';
+  value?: string | number;
+  message: string;
+}
+
 export interface ServiceFieldDefinition {
   id: string;
   label: string;
@@ -94,6 +100,7 @@ export interface ServiceFieldDefinition {
   isSensitivePII: boolean;
   piiTokenName?: string;
   helperText?: string;
+  constraints?: FieldConstraintRule[];
 }
 
 export interface ServiceWorkflow {

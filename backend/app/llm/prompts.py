@@ -79,13 +79,11 @@ def decision_prompt(workflow: WorkflowDefinition, step: WorkflowStep, observatio
     - Quick decision tree for common scenarios
     """
     
-    # Build service-specific field guide
     field_guide = {}
     if hasattr(workflow, 'required_information'):
         for info in workflow.required_information:
             field_guide[info.lower().replace(' ', '_')] = info
     
-    # Build step-by-step guidance
     step_guide = []
     for i, s in enumerate(workflow.steps, 1):
         step_guide.append({
@@ -97,10 +95,12 @@ def decision_prompt(workflow: WorkflowDefinition, step: WorkflowStep, observatio
             'field_key': getattr(s, 'fieldKey', None),
         })
     
-    # Value context for auto-completion
     value_context = {}
     if workflow_values:
         value_context = {k: v for k, v in workflow_values.items() if v}
+
+    observed_selectors = [el.selector for el in observation.elements if el.visible and el.enabled]
+    observed_selector_subset = observed_selectors[:50]
     
     return json.dumps({
         'workflow_id': workflow.id,
@@ -129,15 +129,18 @@ def decision_prompt(workflow: WorkflowDefinition, step: WorkflowStep, observatio
             'If step action=CLICK: find element with matching selector and text, return action="click", next_step="CONTINUE"',
             'If step action=TYPE/FILL/INPUT: find input, return action="type", value_ref=<fieldKey>, next_step="CONTINUE" (PREFER type over fill — simulates human typing)',
             'If step action=SELECT: find select element, return action="select", value_ref=<fieldKey>, next_step="CONTINUE"',
+            'If no exact selector is in the observed selector allowlist, do NOT invent one; return action="wait" and next_step="CONFIRM_USER"',
         ],
         
         'step_roadmap': step_guide,
         'available_values': value_context,
-        'output_contract': 'Return JSON with: action, selector (null only for navigate/wait), value_ref, value, reason, confidence (0.0-1.0), next_step. Selector MUST match an observed element exactly.',
+        'observed_selector_allowlist': observed_selector_subset,
+        'selector_selection_rule': 'selector MUST be an exact string from observed_selector_allowlist; do not generate plausible selector names, suffixes, or variants.',
+        'output_contract': 'Return JSON with: action, selector (null only for navigate/wait), value_ref, value, reason, confidence (0.0-1.0), next_step. Selector MUST match an observed element exactly or be null for wait/CONFIRM_USER.',
         'current_url': observation.url,
         'dom_observation': observation.model_dump(exclude={'text'}),
         'page_text_untrusted': observation.text,
-        'previous_actions': history[-5:],  # Reduced from -10 to speed up token processing
+        'previous_actions': history[-5:],
         'allowed_actions': allowed_actions,
         'security_constraints': ['Only observed selectors', 'No arbitrary code', 'No external navigation'],
     })

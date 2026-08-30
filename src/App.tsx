@@ -12,7 +12,7 @@ import {
   ,ScenarioDefinition
 } from './types';
 import { DEPARTMENTS, DEFAULT_APPLICANT } from './data/workflows';
-import { tokenizePIIData, computeEventHash } from './utils/crypto';
+import { tokenizePIIData, computeEventHash, generateHMAC, sha256 } from './utils/crypto';
 import { evaluateDynamicSignals, SCENARIOS, resolveScenario } from './utils/dynamicScenario';
 import { Header } from './components/Header';
 import { LandingHero } from './components/LandingHero';
@@ -201,8 +201,16 @@ export default function App() {
     const aadhaarNumber = normalize(latestForm.aadhaarNumber);
     const pincode = normalize(latestForm.pincode);
     const address = normalize(latestForm.address);
-    const dob = normalize(latestForm.dob);
+    const rawDob = normalize(latestForm.dob || (latestForm as Record<string, string | undefined>)['date_of_birth']);
     const mobile = normalize(latestForm.mobile);
+
+    // Pass all field keys from latestForm into workflowValues
+    Object.entries(latestForm).forEach(([key, val]) => {
+      const v = normalize(val as string);
+      if (v) {
+        workflowValues[key] = v;
+      }
+    });
 
     if (fullName) {
       workflowValues.full_name = workflowValues.full_name || fullName;
@@ -220,7 +228,11 @@ export default function App() {
       workflowValues.new_address = workflowValues.new_address || address;
       workflowValues.address = workflowValues.address || address;
     }
-    if (dob) workflowValues.dob = workflowValues.dob || dob;
+    if (rawDob) {
+      workflowValues.dob = rawDob;
+      workflowValues.date_of_birth = rawDob;
+      workflowValues.birth_date = rawDob;
+    }
 
     const session = await startRuntimeSession(selectedService.id, workflowValues);
     setRuntimeSessionId(session.session_id);
@@ -308,6 +320,8 @@ export default function App() {
     setIsDriftResolved(false);
     setContradiction(null);
     setIsAttackQuarantined(false);
+    intakeFormRef.current = {};
+    setApplicantData(DEFAULT_APPLICANT);
   };
 
   // Return to Catalog
@@ -322,6 +336,8 @@ export default function App() {
     for (const dept of DEPARTMENTS) {
       const foundService = dept.services.find((s) => s.id === serviceId);
       if (foundService) {
+        intakeFormRef.current = {};
+        setApplicantData(DEFAULT_APPLICANT);
         setSelectedDepartment(dept);
         setSelectedService(foundService);
         setViewMode('SERVICE_INTAKE');
@@ -331,16 +347,39 @@ export default function App() {
   };
 
   // Service intake form submission
-  const handleIntakeSubmit = (formData: Record<string, string>, docData: { name: string; size: string; hash: string; hmac: string }) => {
-    intakeFormRef.current = { ...formData };
-    setApplicantData((prev) => ({
-      ...prev,
+  const handleIntakeSubmit = async (formData: Record<string, string>, docData: { name: string; size: string; hash: string; hmac: string }) => {
+    const payloadForHash = {
+      workflowId: selectedService.id,
+      ...DEFAULT_APPLICANT,
       ...formData,
       uploadedDocumentName: docData.name,
       uploadedDocumentSize: docData.size,
-      uploadedDocumentHash: docData.hash,
-      uploadedDocumentHMAC: docData.hmac,
-    }));
+    };
+
+    const canonical = JSON.stringify(payloadForHash, Object.keys(payloadForHash).sort());
+    const docHash = await sha256(canonical);
+    const docHmac = await generateHMAC(canonical);
+
+    console.log('[CivicFlow Integrity]', {
+      workflowId: selectedService.id,
+      canonicalPayload: canonical,
+      sha256: docHash,
+      hmacSha256: docHmac,
+      uploadedDocumentName: docData.name,
+      uploadedDocumentSize: docData.size,
+    });
+
+    const freshData: Record<string, string> = {
+      ...DEFAULT_APPLICANT,
+      ...formData,
+      uploadedDocumentName: docData.name,
+      uploadedDocumentSize: docData.size,
+      uploadedDocumentHash: docHash,
+      uploadedDocumentHMAC: docHmac,
+    };
+
+    intakeFormRef.current = { ...formData };
+    setApplicantData(freshData);
     setViewMode('INITIALIZING');
   };
 
