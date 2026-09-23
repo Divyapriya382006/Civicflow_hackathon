@@ -388,5 +388,4 @@ pytest -v
 
 ## 👥 Authors & License
 
-Developed for the **CivicFlow Hackathon** by **Divyapriya & Kannan**.  
 Released under the [MIT License](LICENSE).
